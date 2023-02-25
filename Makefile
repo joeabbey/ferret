@@ -31,5 +31,5 @@ doc: ## run godoc server on http://localhost:6060/pkg
 
 
 $(GOPATH)/bin/golint:
-	go install github.com/golang/lint/golint@latest
+	go install golang.org/x/lint/golint@latest
 
