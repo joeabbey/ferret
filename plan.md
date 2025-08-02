@@ -6,7 +6,7 @@ This plan outlines the implementation of the enhancements described in `enhancem
 ## Progress Summary
 - **Phase 1**: ✅ COMPLETED (2025-08-02) - Core safety and architecture improvements
 - **Phase 2**: ✅ COMPLETED (2025-08-02) - Enhanced metrics collection
-- **Phase 3**: ⏳ Not started - Observability integration
+- **Phase 3**: ✅ COMPLETED (2025-08-02) - Observability integration
 - **Phase 4**: ⏳ Not started - Testing and quality
 - **Phase 5**: ⏳ Not started - CLI tool enhancement
 - **Phase 6**: ⏳ Not started - Documentation and release
@@ -97,30 +97,43 @@ This plan outlines the implementation of the enhancements described in `enhancem
 - [x] Tested with both HTTP and HTTPS connections
 - [x] Verified thread safety with race detector
 
-## Phase 3: Observability Integration (Priority: Medium)
+## Phase 3: Observability Integration (Priority: Medium) ✅ COMPLETED
 
-### 3.1 Prometheus Support
+### 3.1 Prometheus Support ✅
 **Goal**: First-class metrics export for production monitoring.
 
 **Tasks**:
-- [ ] Create `WithPrometheus(collectors)` option
-- [ ] Implement histogram collection for each phase
-- [ ] Add labels for method, host, status code
-- [ ] Document Prometheus integration patterns
+- [x] Create `WithPrometheus(collectors)` option
+- [x] Implement histogram collection for each phase
+- [x] Add labels for method, host, status code
+- [x] Document Prometheus integration patterns
 
-**Files to create**:
+**Files created**:
 - `pkg/ferret/prometheus.go`: Prometheus-specific integration
+- `pkg/ferret/prometheus_test.go`: Comprehensive tests
 
-### 3.2 OpenTelemetry Support (Optional)
+### 3.2 OpenTelemetry Support ✅
 **Goal**: Support modern tracing standards.
 
 **Tasks**:
-- [ ] Create `WithOpenTelemetry(tracer)` option
-- [ ] Implement span creation and attribute setting
-- [ ] Ensure proper span relationships
+- [x] Create `WithOpenTelemetry(tracer)` option
+- [x] Implement span creation and attribute setting
+- [x] Ensure proper span relationships
 
-**Files to create**:
+**Files created**:
 - `pkg/ferret/otel.go`: OpenTelemetry integration
+- `pkg/ferret/otel_test.go`: Comprehensive tests
+
+### 3.3 Additional Features ✅
+**Additional work completed**:
+- [x] Created `PrometheusConfig` struct for flexible configuration
+- [x] Added support for detailed phase metrics (DNS, connect, TLS, etc.)
+- [x] Implemented request counter and in-flight gauge metrics
+- [x] Created helper functions for default metric configurations
+- [x] Added span events for detailed timing in OpenTelemetry
+- [x] Implemented custom span name formatter support
+- [x] Fixed transport initialization order for proper wrapping
+- [x] Verified thread safety with wrapped transports
 
 ## Phase 4: Testing and Quality (Priority: High)
 
