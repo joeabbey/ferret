@@ -1,18 +1,16 @@
+version: "2"
+
 run:
   timeout: 5m
   tests: true
   
 linters:
   enable:
-    - gofmt
-    - goimports
     - govet
     - errcheck
     - staticcheck
     - unused
-    - gosimple
     - ineffassign
-    - typecheck
     - gocritic
     - gosec
     - dupl
@@ -25,17 +23,16 @@ linters:
     - dogsled
     - bodyclose
     - asciicheck
-    - exportloopref
     - rowserrcheck
     - makezero
     - durationcheck
     - predeclared
+    - revive
+    - whitespace
 
 linters-settings:
   govet:
     check-shadowing: true
-  gofmt:
-    simplify: true
   gocritic:
     enabled-tags:
       - diagnostic
@@ -49,6 +46,10 @@ linters-settings:
     max-func-lines: 30
   dupl:
     threshold: 100
+  revive:
+    rules:
+      - name: gofmt
+        disabled: false
 
 issues:
   exclude-rules:
