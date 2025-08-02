@@ -35,10 +35,10 @@ func TestIntegrationWithRealServer(t *testing.T) {
 	client.Transport = ferret
 
 	tests := []struct {
-		path          string
-		minDuration   time.Duration
-		expectError   bool
-		expectStatus  int
+		path         string
+		minDuration  time.Duration
+		expectError  bool
+		expectStatus int
 	}{
 		{"/fast", 0, false, http.StatusOK},
 		{"/slow", 90 * time.Millisecond, false, http.StatusOK},
@@ -233,7 +233,7 @@ func TestIntegrationHTTP2(t *testing.T) {
 		w.Header().Set("X-Protocol", r.Proto)
 		w.WriteHeader(http.StatusOK)
 	}))
-	
+
 	// Enable HTTP/2
 	server.TLS = &tls.Config{
 		NextProtos: []string{"h2", "http/1.1"},
@@ -245,7 +245,7 @@ func TestIntegrationHTTP2(t *testing.T) {
 	client := server.Client()
 	baseTransport := client.Transport.(*http.Transport)
 	baseTransport.ForceAttemptHTTP2 = true
-	
+
 	ferret := New(WithTransport(baseTransport))
 	client.Transport = ferret
 
@@ -339,7 +339,7 @@ func TestIntegrationLargeResponse(t *testing.T) {
 // TestIntegrationWithRedirects tests redirect handling.
 func TestIntegrationWithRedirects(t *testing.T) {
 	redirectCount := 0
-	
+
 	// Create server with redirects
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -360,7 +360,7 @@ func TestIntegrationWithRedirects(t *testing.T) {
 	defer server.Close()
 
 	ferret := New()
-	
+
 	// Use custom client that follows redirects
 	client := &http.Client{
 		Transport: ferret,
@@ -393,3 +393,4 @@ func TestIntegrationWithRedirects(t *testing.T) {
 		t.Error("Expected positive total duration")
 	}
 }
+

@@ -38,3 +38,4 @@ func GetRegions() []Region {
 func GetEC2Endpoint(regionID string) string {
 	return fmt.Sprintf("https://ec2.%s.amazonaws.com/ping", regionID)
 }
+

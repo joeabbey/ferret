@@ -45,7 +45,7 @@ func ExampleNew() {
 func ExampleNew_withOptions() {
 	// Create Ferret with custom configuration
 	f := ferret.New(
-		ferret.WithKeepAlives(false),        // Disable keep-alives for cleaner measurements
+		ferret.WithKeepAlives(false),                      // Disable keep-alives for cleaner measurements
 		ferret.WithTimeout(5*time.Second, 10*time.Second), // 5s connect, 10s total timeout
 		ferret.WithTLSHandshakeTimeout(3*time.Second),
 	)
@@ -92,7 +92,6 @@ func ExampleGetResult() {
 		fmt.Printf("  Total time: %v\n", result.TotalDuration())
 	}
 }
-
 
 // ExampleWithPrometheus demonstrates Prometheus integration.
 func ExampleWithPrometheus() {

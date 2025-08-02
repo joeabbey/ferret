@@ -15,10 +15,10 @@ import (
 type OpenTelemetryConfig struct {
 	// Tracer to use for creating spans
 	Tracer trace.Tracer
-	
+
 	// SpanNameFormatter allows customizing the span name
 	SpanNameFormatter func(*http.Request) string
-	
+
 	// Whether to record detailed timing events
 	DetailedEvents bool
 }
@@ -81,7 +81,7 @@ func (t *otelTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 			attribute.Int("http.status_code", resp.StatusCode),
 			attribute.String("http.status_text", http.StatusText(resp.StatusCode)),
 		)
-		
+
 		// Set span status based on HTTP status code
 		if resp.StatusCode >= 400 {
 			span.SetStatus(codes.Error, http.StatusText(resp.StatusCode))

@@ -22,8 +22,8 @@ type Ferret struct {
 	next http.RoundTripper
 
 	// Options
-	dialer        *net.Dialer
-	disableKeepAlives bool
+	dialer              *net.Dialer
+	disableKeepAlives   bool
 	tlsHandshakeTimeout time.Duration
 
 	// For testing
@@ -42,8 +42,8 @@ func NewFerret() *Ferret {
 // New creates a new Ferret transport with the given options.
 func New(opts ...Option) *Ferret {
 	f := &Ferret{
-		clock: time.Now,
-		disableKeepAlives: false, // Default to enabled for production use
+		clock:               time.Now,
+		disableKeepAlives:   false, // Default to enabled for production use
 		tlsHandshakeTimeout: 10 * time.Second,
 		dialer: &net.Dialer{
 			Timeout:   30 * time.Second,
@@ -67,7 +67,7 @@ func New(opts ...Option) *Ferret {
 	for _, opt := range opts {
 		opt(f)
 	}
-	
+
 	// Fix up any wrapped transports that need the base transport
 	if wrapper, ok := f.next.(*otelTransport); ok && wrapper.next == nil {
 		wrapper.next = baseTransport
@@ -89,7 +89,7 @@ func (f *Ferret) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	// Attach result to context
 	ctx := context.WithValue(req.Context(), resultKey, result)
-	
+
 	// Create httptrace client trace
 	trace := &httptrace.ClientTrace{
 		DNSStart: func(info httptrace.DNSStartInfo) {
@@ -114,14 +114,14 @@ func (f *Ferret) RoundTrip(req *http.Request) (*http.Response, error) {
 			result.FirstByte = f.clock()
 		},
 	}
-	
+
 	// Add trace to context
 	ctx = httptrace.WithClientTrace(ctx, trace)
 	req = req.WithContext(ctx)
 
 	// Execute the request
 	resp, err := f.next.RoundTrip(req)
-	
+
 	// Record completion time
 	result.End = f.clock()
 	result.Error = err
@@ -130,7 +130,7 @@ func (f *Ferret) RoundTrip(req *http.Request) (*http.Response, error) {
 	if resp != nil && result.FirstByte.IsZero() {
 		result.FirstByte = result.End
 	}
-	
+
 	// Store the result in the response request as well
 	if resp != nil && resp.Request != nil {
 		ctx := context.WithValue(resp.Request.Context(), resultKey, result)

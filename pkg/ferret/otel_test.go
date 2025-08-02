@@ -60,11 +60,11 @@ func (m *mockTracer) Start(ctx context.Context, spanName string, opts ...trace.S
 		Span: noop.Span{},
 		name: spanName,
 	}
-	
+
 	// Apply span start options to capture initial attributes
 	cfg := trace.NewSpanStartConfig(opts...)
 	span.attributes = append(span.attributes, cfg.Attributes()...)
-	
+
 	m.spans = append(m.spans, span)
 	return trace.ContextWithSpan(ctx, span), span
 }
@@ -120,7 +120,7 @@ func TestOpenTelemetryIntegration(t *testing.T) {
 	// Verify key attributes are present
 	hasStatusCode := false
 	hasMethod := false
-	
+
 	for _, attr := range span.attributes {
 		switch string(attr.Key) {
 		case "http.method":

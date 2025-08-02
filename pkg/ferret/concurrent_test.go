@@ -15,12 +15,12 @@ func TestHighConcurrency(t *testing.T) {
 	// Create a test server that tracks concurrent requests
 	var activeRequests int32
 	var maxConcurrent int32
-	
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Track concurrent requests
 		current := atomic.AddInt32(&activeRequests, 1)
 		defer atomic.AddInt32(&activeRequests, -1)
-		
+
 		// Update max if needed
 		for {
 			max := atomic.LoadInt32(&maxConcurrent)
@@ -28,7 +28,7 @@ func TestHighConcurrency(t *testing.T) {
 				break
 			}
 		}
-		
+
 		// Simulate some work
 		time.Sleep(10 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
@@ -43,49 +43,49 @@ func TestHighConcurrency(t *testing.T) {
 	// Number of concurrent requests
 	concurrency := 100
 	iterations := 10
-	
+
 	var wg sync.WaitGroup
 	errors := make(chan error, concurrency*iterations)
-	
+
 	// Launch concurrent requests
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			
+
 			for j := 0; j < iterations; j++ {
 				req, err := http.NewRequest("GET", server.URL, nil)
 				if err != nil {
 					errors <- err
 					continue
 				}
-				
+
 				resp, err := client.Do(req)
 				if err != nil {
 					errors <- err
 					continue
 				}
-				
+
 				// Verify we got a result
 				result := GetResult(resp.Request)
 				if result == nil {
 					errors <- err
 					continue
 				}
-				
+
 				// Verify timing data
 				if result.TotalDuration() <= 0 {
 					errors <- err
 				}
-				
+
 				resp.Body.Close()
 			}
 		}(i)
 	}
-	
+
 	wg.Wait()
 	close(errors)
-	
+
 	// Check for errors
 	errorCount := 0
 	for err := range errors {
@@ -96,11 +96,11 @@ func TestHighConcurrency(t *testing.T) {
 			}
 		}
 	}
-	
+
 	if errorCount > 0 {
 		t.Errorf("Total %d requests failed out of %d", errorCount, concurrency*iterations)
 	}
-	
+
 	t.Logf("Max concurrent requests handled: %d", atomic.LoadInt32(&maxConcurrent))
 }
 
@@ -174,15 +174,15 @@ func TestRaceConditionWithOptions(t *testing.T) {
 	defer server.Close()
 
 	var wg sync.WaitGroup
-	
+
 	// Concurrently create Ferret instances with different options
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			
+
 			var ferret *Ferret
-			
+
 			// Use different options based on ID
 			switch id % 3 {
 			case 0:
@@ -190,11 +190,11 @@ func TestRaceConditionWithOptions(t *testing.T) {
 			case 1:
 				ferret = New(WithKeepAlives(false), WithTimeout(5*time.Second, 10*time.Second))
 			case 2:
-				ferret = New(WithTLSHandshakeTimeout(3*time.Second))
+				ferret = New(WithTLSHandshakeTimeout(3 * time.Second))
 			}
-			
+
 			client := &http.Client{Transport: ferret}
-			
+
 			req, _ := http.NewRequest("GET", server.URL, nil)
 			resp, err := client.Do(req)
 			if err != nil {
@@ -204,7 +204,7 @@ func TestRaceConditionWithOptions(t *testing.T) {
 			resp.Body.Close()
 		}(i)
 	}
-	
+
 	wg.Wait()
 }
 
@@ -224,18 +224,18 @@ func TestConcurrentMetricsCollection(t *testing.T) {
 
 	var wg sync.WaitGroup
 	results := make([]*Result, 100)
-	
+
 	// Make concurrent requests with different delays
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			
+
 			url := server.URL
 			if index%2 == 0 {
 				url += "?delay=true"
 			}
-			
+
 			req, _ := http.NewRequest("GET", url, nil)
 			resp, err := client.Do(req)
 			if err != nil {
@@ -243,29 +243,29 @@ func TestConcurrentMetricsCollection(t *testing.T) {
 				return
 			}
 			defer resp.Body.Close()
-			
+
 			results[index] = GetResult(resp.Request)
 		}(i)
 	}
-	
+
 	wg.Wait()
-	
+
 	// Verify all results are unique and have valid data
 	slowCount := 0
 	fastCount := 0
-	
+
 	for i, result := range results {
 		if result == nil {
 			t.Errorf("Result %d is nil", i)
 			continue
 		}
-		
+
 		duration := result.TotalDuration()
 		if duration <= 0 {
 			t.Errorf("Result %d has invalid duration", i)
 			continue
 		}
-		
+
 		// Check if delays were applied correctly
 		if i%2 == 0 && duration > 40*time.Millisecond {
 			slowCount++
@@ -273,9 +273,10 @@ func TestConcurrentMetricsCollection(t *testing.T) {
 			fastCount++
 		}
 	}
-	
+
 	// Verify we got roughly the expected distribution
 	if slowCount < 40 || fastCount < 40 {
 		t.Errorf("Unexpected distribution: slow=%d, fast=%d", slowCount, fastCount)
 	}
 }
+

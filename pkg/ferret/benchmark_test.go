@@ -23,7 +23,7 @@ func BenchmarkFerretOverhead(b *testing.B) {
 				DisableKeepAlives: true,
 			},
 		}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			resp, err := client.Get(server.URL)
@@ -37,7 +37,7 @@ func BenchmarkFerretOverhead(b *testing.B) {
 	b.Run("Ferret", func(b *testing.B) {
 		ferret := New(WithKeepAlives(false))
 		client := &http.Client{Transport: ferret}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			resp, err := client.Get(server.URL)
@@ -51,7 +51,7 @@ func BenchmarkFerretOverhead(b *testing.B) {
 	b.Run("FerretWithResult", func(b *testing.B) {
 		ferret := New(WithKeepAlives(false))
 		client := &http.Client{Transport: ferret}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			req, _ := http.NewRequest("GET", server.URL, nil)
@@ -102,7 +102,7 @@ func BenchmarkWithObservability(b *testing.B) {
 	b.Run("Plain", func(b *testing.B) {
 		ferret := New()
 		client := &http.Client{Transport: ferret}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			resp, _ := client.Get(server.URL)
@@ -116,10 +116,10 @@ func BenchmarkWithObservability(b *testing.B) {
 			DurationHistogram: DefaultPrometheusHistogram(),
 			DetailedMetrics:   true,
 		}
-		
+
 		ferret := New(WithPrometheus(config))
 		client := &http.Client{Transport: ferret}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			resp, _ := client.Get(server.URL)
@@ -148,7 +148,7 @@ func BenchmarkResultOperations(b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
 		ctx := context.WithValue(req.Context(), resultKey, result)
 		req = req.WithContext(ctx)
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			r := GetResult(req)
@@ -184,7 +184,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		req, _ := http.NewRequest("GET", server.URL, nil)
 		resp, err := client.Do(req)
@@ -224,7 +224,7 @@ func BenchmarkLargeResponse(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		// Read entire response
 		buf := make([]byte, 4096)
 		for {

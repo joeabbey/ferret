@@ -10,13 +10,13 @@
 //
 //	transport := ferret.New()
 //	client := &http.Client{Transport: transport}
-//	
+//
 //	resp, err := client.Get("https://example.com")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	defer resp.Body.Close()
-//	
+//
 //	result := ferret.GetResult(resp.Request)
 //	if result != nil {
 //	    fmt.Printf("Total time: %v\n", result.TotalDuration())
@@ -48,7 +48,7 @@
 //	    },
 //	    []string{"method", "host", "status"},
 //	)
-//	
+//
 //	transport := ferret.New(
 //	    ferret.WithPrometheus(&ferret.PrometheusConfig{
 //	        DurationHistogram: histogramVec,
@@ -64,3 +64,4 @@
 // The library has minimal overhead and is suitable for production use,
 // including high-traffic services.
 package ferret
+

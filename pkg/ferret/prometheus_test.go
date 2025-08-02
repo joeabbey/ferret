@@ -74,7 +74,7 @@ func TestPrometheusIntegration(t *testing.T) {
 		"code":   "200",
 		"status": "success",
 	}
-	
+
 	if got := testutil.ToFloat64(counter.With(expectedLabels)); got != 1 {
 		t.Errorf("Expected counter to be 1, got %v", got)
 	}
@@ -94,14 +94,14 @@ func TestPrometheusIntegration(t *testing.T) {
 			}
 		}
 	}
-	
+
 	// Alternative: create a custom registry for more precise testing
 	// This is left as an example of how to do more detailed verification:
 	/*
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(hist)
-	metricFamilies, _ := reg.Gather()
-	// ... check specific metrics ...
+		reg := prometheus.NewRegistry()
+		reg.MustRegister(hist)
+		metricFamilies, _ := reg.Gather()
+		// ... check specific metrics ...
 	*/
 }
 
@@ -141,7 +141,7 @@ func TestPrometheusWithError(t *testing.T) {
 		"code":   "0",
 		"status": "error",
 	}
-	
+
 	if got := testutil.ToFloat64(counter.With(errorLabels)); got != 1 {
 		t.Errorf("Expected error counter to be 1, got %v", got)
 	}
@@ -205,30 +205,30 @@ func TestPrometheusInFlight(t *testing.T) {
 func TestSimplePrometheusConfig(t *testing.T) {
 	// Use a unique registry for this test
 	reg := prometheus.NewRegistry()
-	
+
 	// Create config but don't use the helper that auto-registers
 	hist := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name: "test_simple_duration_seconds",
-			Help: "Test simple histogram",
+			Name:    "test_simple_duration_seconds",
+			Help:    "Test simple histogram",
 			Buckets: prometheus.DefBuckets,
 		},
 		[]string{"phase", "method", "host", "code", "status"},
 	)
-	
+
 	config := PrometheusConfig{
 		DurationHistogram: hist,
 		DetailedMetrics:   true,
 	}
-	
+
 	// Register with our test registry
 	reg.MustRegister(hist)
-	
+
 	// Verify metrics are created
 	if config.DurationHistogram == nil {
 		t.Error("Expected DurationHistogram to be created")
 	}
-	
+
 	if !config.DetailedMetrics {
 		t.Error("Expected DetailedMetrics to be true")
 	}

@@ -404,7 +404,7 @@ func TestResultStringWithDetailedTimings(t *testing.T) {
 	}
 
 	str := r.String()
-	
+
 	// Check that all timing components are present
 	if !contains(str, "total=150ms") {
 		t.Errorf("String should contain total time: %s", str)

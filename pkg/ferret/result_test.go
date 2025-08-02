@@ -41,7 +41,7 @@ func TestResultZeroValues(t *testing.T) {
 // TestResultPartialValues verifies behavior with partial timing data.
 func TestResultPartialValues(t *testing.T) {
 	now := time.Now()
-	
+
 	tests := []struct {
 		name   string
 		result *Result
@@ -119,7 +119,7 @@ func TestResultPartialValues(t *testing.T) {
 // TestResultJSONSerialization verifies JSON output format.
 func TestResultJSONSerialization(t *testing.T) {
 	now := time.Now()
-	
+
 	tests := []struct {
 		name   string
 		result *Result
@@ -229,9 +229,9 @@ func TestResultString(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		name     string
-		result   *Result
-		contains []string
+		name        string
+		result      *Result
+		contains    []string
 		notContains []string
 	}{
 		{
