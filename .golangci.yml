@@ -1,0 +1,72 @@
+run:
+  timeout: 5m
+  tests: true
+  
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - typecheck
+    - gocritic
+    - gosec
+    - dupl
+    - unconvert
+    - nakedret
+    - prealloc
+    - misspell
+    - lll
+    - unparam
+    - dogsled
+    - bodyclose
+    - asciicheck
+    - exportloopref
+    - rowserrcheck
+    - makezero
+    - durationcheck
+    - predeclared
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gofmt:
+    simplify: true
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  lll:
+    line-length: 120
+  nakedret:
+    max-func-lines: 30
+  dupl:
+    threshold: 100
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - gosec
+        - dupl
+    
+    # Exclude example files
+    - path: example_test\.go
+      linters:
+        - lll
+    
+    # Allow fmt.Printf in main packages
+    - path: cmd/
+      linters:
+        - forbidigo
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
