@@ -140,7 +140,12 @@ func measureDuration(url string) (time.Duration, error) {
 	f := ferret.NewFerret()
 	client := &http.Client{Transport: f}
 
-	resp, err := client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return time.Duration(0), err
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return time.Duration(0), err
 	}
@@ -149,7 +154,13 @@ func measureDuration(url string) (time.Duration, error) {
 	output := ioutil.Discard
 	io.Copy(output, resp.Body)
 
-	return f.ConnDuration(), nil
+	// Get the result from the response's request
+	result := ferret.GetResult(resp.Request)
+	if result == nil {
+		return time.Duration(0), fmt.Errorf("no timing information available")
+	}
+
+	return result.ConnectionDuration(), nil
 }
 
 func computeAverages(results [][]time.Duration, tableView *widgets.Table) {
