@@ -236,6 +236,7 @@ func TestIntegrationHTTP2(t *testing.T) {
 
 	// Enable HTTP/2
 	server.TLS = &tls.Config{
+		MinVersion: tls.VersionTLS12,
 		NextProtos: []string{"h2", "http/1.1"},
 	}
 	server.StartTLS()

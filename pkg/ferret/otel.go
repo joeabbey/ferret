@@ -1,10 +1,8 @@
 package ferret
 
 import (
-	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
