@@ -2,8 +2,10 @@ package ferret
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"time"
 )
 
@@ -77,6 +79,34 @@ func (f *Ferret) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	// Attach result to context
 	ctx := context.WithValue(req.Context(), resultKey, result)
+	
+	// Create httptrace client trace
+	trace := &httptrace.ClientTrace{
+		DNSStart: func(info httptrace.DNSStartInfo) {
+			result.DNSStart = f.clock()
+		},
+		DNSDone: func(info httptrace.DNSDoneInfo) {
+			result.DNSDone = f.clock()
+		},
+		ConnectStart: func(network, addr string) {
+			result.ConnectStart = f.clock()
+		},
+		ConnectDone: func(network, addr string, err error) {
+			result.ConnectDone = f.clock()
+		},
+		TLSHandshakeStart: func() {
+			result.TLSHandshakeStart = f.clock()
+		},
+		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
+			result.TLSHandshakeDone = f.clock()
+		},
+		GotFirstResponseByte: func() {
+			result.FirstByte = f.clock()
+		},
+	}
+	
+	// Add trace to context
+	ctx = httptrace.WithClientTrace(ctx, trace)
 	req = req.WithContext(ctx)
 
 	// Execute the request
@@ -86,36 +116,24 @@ func (f *Ferret) RoundTrip(req *http.Request) (*http.Response, error) {
 	result.End = f.clock()
 	result.Error = err
 
-	// If we got a response, record first byte time
-	if resp != nil {
+	// If we got a response but FirstByte wasn't set (non-HTTP transport), set it now
+	if resp != nil && result.FirstByte.IsZero() {
 		result.FirstByte = result.End
-		// Store the result in the response request as well
-		if resp.Request != nil {
-			ctx := context.WithValue(resp.Request.Context(), resultKey, result)
-			resp.Request = resp.Request.WithContext(ctx)
-		}
+	}
+	
+	// Store the result in the response request as well
+	if resp != nil && resp.Request != nil {
+		ctx := context.WithValue(resp.Request.Context(), resultKey, result)
+		resp.Request = resp.Request.WithContext(ctx)
 	}
 
 	return resp, err
 }
 
-// dialContext is our custom dial function that records connection timing.
+// dialContext is our custom dial function.
 func (f *Ferret) dialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	// Get the result from context
-	result := resultFromContext(ctx)
-	if result != nil {
-		result.ConnectStart = f.clock()
-	}
-
-	// Dial
-	conn, err := f.dialer.DialContext(ctx, network, addr)
-
-	// Record connection established time
-	if result != nil {
-		result.ConnectDone = f.clock()
-	}
-
-	return conn, err
+	// Simply dial - httptrace will handle the timing
+	return f.dialer.DialContext(ctx, network, addr)
 }
 
 // GetResult retrieves the timing result from a request.

@@ -5,7 +5,7 @@ This plan outlines the implementation of the enhancements described in `enhancem
 
 ## Progress Summary
 - **Phase 1**: ✅ COMPLETED (2025-08-02) - Core safety and architecture improvements
-- **Phase 2**: ⏳ Not started - Enhanced metrics collection
+- **Phase 2**: ✅ COMPLETED (2025-08-02) - Enhanced metrics collection
 - **Phase 3**: ⏳ Not started - Observability integration
 - **Phase 4**: ⏳ Not started - Testing and quality
 - **Phase 5**: ⏳ Not started - CLI tool enhancement
@@ -61,31 +61,41 @@ This plan outlines the implementation of the enhancements described in `enhancem
 - [x] Tested Result methods and JSON serialization
 - [x] Maintained backward compatibility with legacy API
 
-## Phase 2: Enhanced Metrics Collection (Priority: High)
+## Phase 2: Enhanced Metrics Collection (Priority: High) ✅ COMPLETED
 
-### 2.1 HTTPTrace Integration
+### 2.1 HTTPTrace Integration ✅
 **Goal**: Capture detailed timing breakdowns (DNS, TLS, first-byte).
 
 **Tasks**:
-- [ ] Extend `Result` struct with new timing fields
-- [ ] Implement `httptrace.ClientTrace` hooks
-- [ ] Calculate phase durations (DNS time, TLS time, etc.)
-- [ ] Ensure trace integration with context
+- [x] Extend `Result` struct with new timing fields
+- [x] Implement `httptrace.ClientTrace` hooks
+- [x] Calculate phase durations (DNS time, TLS time, etc.)
+- [x] Ensure trace integration with context
 
-**Files to modify**:
-- `pkg/ferret/ferret.go`: Add httptrace implementation
-- `pkg/ferret/result.go`: New file for Result struct and methods
+**Files modified**:
+- `pkg/ferret/ferret.go`: Added httptrace implementation
+- `pkg/ferret/result.go`: Already existed with timing fields
 
-### 2.2 Result Serialization
+### 2.2 Result Serialization ✅
 **Goal**: Enable easy consumption of metrics.
 
 **Tasks**:
-- [ ] Implement `(*Result).MarshalJSON()` for JSON output
-- [ ] Add `(*Result).String()` for human-readable format
-- [ ] Create phase duration calculation methods
+- [x] Implement `(*Result).MarshalJSON()` for JSON output (already existed)
+- [x] Add `(*Result).String()` for human-readable format (enhanced)
+- [x] Create phase duration calculation methods
 
-**Files to create**:
-- `pkg/ferret/result.go`: Result methods and serialization
+**Files modified**:
+- `pkg/ferret/result.go`: Enhanced with new duration methods
+
+### 2.3 Additional Enhancements ✅
+**Additional work completed**:
+- [x] Added `ServerProcessingDuration()` method
+- [x] Added `DataTransferDuration()` method
+- [x] Enhanced `String()` output to include all timing phases
+- [x] Fixed `ConnectionDuration()` to use ConnectStart when available
+- [x] Created comprehensive tests for HTTPTrace integration
+- [x] Tested with both HTTP and HTTPS connections
+- [x] Verified thread safety with race detector
 
 ## Phase 3: Observability Integration (Priority: Medium)
 

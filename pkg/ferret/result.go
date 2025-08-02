@@ -27,10 +27,16 @@ type Result struct {
 
 // ConnectionDuration returns the time taken to establish the connection.
 func (r *Result) ConnectionDuration() time.Duration {
-	if r.ConnectDone.IsZero() || r.Start.IsZero() {
+	// Use ConnectStart if available (from httptrace), otherwise use Start
+	start := r.ConnectStart
+	if start.IsZero() {
+		start = r.Start
+	}
+	
+	if r.ConnectDone.IsZero() || start.IsZero() {
 		return 0
 	}
-	return r.ConnectDone.Sub(r.Start)
+	return r.ConnectDone.Sub(start)
 }
 
 // RequestDuration returns the time from connection established to first byte.
@@ -75,6 +81,30 @@ func (r *Result) TTFB() time.Duration {
 	return r.FirstByte.Sub(r.Start)
 }
 
+// ServerProcessingDuration returns the time the server took to process the request.
+// This is the time from when the request was sent until the first byte was received.
+func (r *Result) ServerProcessingDuration() time.Duration {
+	// Find the end of connection setup (either TLS done or connect done)
+	connEnd := r.TLSHandshakeDone
+	if connEnd.IsZero() {
+		connEnd = r.ConnectDone
+	}
+	
+	if r.FirstByte.IsZero() || connEnd.IsZero() {
+		return 0
+	}
+	return r.FirstByte.Sub(connEnd)
+}
+
+// DataTransferDuration returns the time taken to receive the response body.
+// This is the time from first byte to the end of the response.
+func (r *Result) DataTransferDuration() time.Duration {
+	if r.End.IsZero() || r.FirstByte.IsZero() {
+		return 0
+	}
+	return r.End.Sub(r.FirstByte)
+}
+
 // MarshalJSON implements json.Marshaler for easy JSON output.
 func (r *Result) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
@@ -101,9 +131,30 @@ func (r *Result) String() string {
 	if r.Error != nil {
 		return "Error: " + r.Error.Error()
 	}
-	return "connect=" + r.ConnectionDuration().String() +
-		" request=" + r.RequestDuration().String() +
-		" total=" + r.TotalDuration().String()
+	
+	s := "total=" + r.TotalDuration().String()
+	
+	// Add DNS time if available
+	if dns := r.DNSDuration(); dns > 0 {
+		s += " dns=" + dns.String()
+	}
+	
+	// Add connection time
+	if conn := r.ConnectionDuration(); conn > 0 {
+		s += " connect=" + conn.String()
+	}
+	
+	// Add TLS time if available
+	if tls := r.TLSDuration(); tls > 0 {
+		s += " tls=" + tls.String()
+	}
+	
+	// Add TTFB
+	if ttfb := r.TTFB(); ttfb > 0 {
+		s += " ttfb=" + ttfb.String()
+	}
+	
+	return s
 }
 
 func errorString(err error) string {

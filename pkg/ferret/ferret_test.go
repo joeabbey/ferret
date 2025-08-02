@@ -207,3 +207,231 @@ func TestLegacyMethods(t *testing.T) {
 		t.Error("Expected Duration to return 0")
 	}
 }
+
+// TestHTTPTraceIntegration verifies httptrace timing capture.
+func TestHTTPTraceIntegration(t *testing.T) {
+	// Create a test server that supports HTTPS
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(5 * time.Millisecond) // Simulate processing
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Hello, World!"))
+	}))
+	defer server.Close()
+
+	// Get the test server's HTTP client (which trusts the test certificate)
+	// and wrap its transport with Ferret
+	client := server.Client()
+	ferret := New(WithTransport(client.Transport))
+	client.Transport = ferret
+
+	// Make request
+	req, err := http.NewRequest("GET", server.URL, nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Get result
+	result := GetResult(resp.Request)
+	if result == nil {
+		t.Fatal("No result found")
+	}
+
+	// Verify all timing fields are populated
+	if result.Start.IsZero() {
+		t.Error("Start time not set")
+	}
+	if result.ConnectStart.IsZero() {
+		t.Error("ConnectStart time not set")
+	}
+	if result.ConnectDone.IsZero() {
+		t.Error("ConnectDone time not set")
+	}
+	if result.TLSHandshakeStart.IsZero() {
+		t.Error("TLSHandshakeStart time not set")
+	}
+	if result.TLSHandshakeDone.IsZero() {
+		t.Error("TLSHandshakeDone time not set")
+	}
+	if result.FirstByte.IsZero() {
+		t.Error("FirstByte time not set")
+	}
+	if result.End.IsZero() {
+		t.Error("End time not set")
+	}
+
+	// Verify basic timing order (some events may happen simultaneously)
+	if !result.Start.Before(result.End) {
+		t.Error("Start should be before End")
+	}
+	if !result.ConnectStart.Before(result.FirstByte) {
+		t.Error("ConnectStart should be before FirstByte")
+	}
+	if !result.TLSHandshakeStart.Before(result.FirstByte) {
+		t.Error("TLSHandshakeStart should be before FirstByte")
+	}
+	// Note: ConnectDone and TLSHandshakeDone may be reported at the same time
+	// or in slightly different order depending on the implementation
+
+	// Verify durations
+	if result.ConnectionDuration() <= 0 {
+		t.Error("ConnectionDuration should be positive")
+	}
+	if result.TLSDuration() <= 0 {
+		t.Error("TLSDuration should be positive")
+	}
+	if result.ServerProcessingDuration() <= 0 {
+		t.Error("ServerProcessingDuration should be positive")
+	}
+	if result.TTFB() <= 0 {
+		t.Error("TTFB should be positive")
+	}
+	if result.TotalDuration() <= 0 {
+		t.Error("TotalDuration should be positive")
+	}
+}
+
+// TestHTTPTraceWithPlainHTTP verifies httptrace works without TLS.
+func TestHTTPTraceWithPlainHTTP(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	}))
+	defer server.Close()
+
+	ferret := New()
+	client := &http.Client{Transport: ferret}
+
+	req, err := http.NewRequest("GET", server.URL, nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	result := GetResult(resp.Request)
+	if result == nil {
+		t.Fatal("No result found")
+	}
+
+	// TLS fields should be zero for plain HTTP
+	if !result.TLSHandshakeStart.IsZero() {
+		t.Error("TLSHandshakeStart should be zero for plain HTTP")
+	}
+	if !result.TLSHandshakeDone.IsZero() {
+		t.Error("TLSHandshakeDone should be zero for plain HTTP")
+	}
+	if result.TLSDuration() != 0 {
+		t.Error("TLSDuration should be 0 for plain HTTP")
+	}
+
+	// Other timings should still be present
+	if result.ConnectStart.IsZero() {
+		t.Error("ConnectStart should be set")
+	}
+	if result.ConnectDone.IsZero() {
+		t.Error("ConnectDone should be set")
+	}
+}
+
+// TestResultPhaseDurations verifies the new phase duration methods.
+func TestResultPhaseDurations(t *testing.T) {
+	now := time.Now()
+	r := &Result{
+		Start:             now,
+		DNSStart:          now.Add(10 * time.Millisecond),
+		DNSDone:           now.Add(20 * time.Millisecond),
+		ConnectStart:      now.Add(20 * time.Millisecond),
+		TLSHandshakeStart: now.Add(30 * time.Millisecond),
+		TLSHandshakeDone:  now.Add(50 * time.Millisecond),
+		ConnectDone:       now.Add(50 * time.Millisecond),
+		FirstByte:         now.Add(100 * time.Millisecond),
+		End:               now.Add(150 * time.Millisecond),
+	}
+
+	// Test phase durations
+	if r.DNSDuration() != 10*time.Millisecond {
+		t.Errorf("Expected DNS duration 10ms, got %v", r.DNSDuration())
+	}
+
+	if r.ConnectionDuration() != 30*time.Millisecond {
+		t.Errorf("Expected connection duration 30ms, got %v", r.ConnectionDuration())
+	}
+
+	if r.TLSDuration() != 20*time.Millisecond {
+		t.Errorf("Expected TLS duration 20ms, got %v", r.TLSDuration())
+	}
+
+	if r.ServerProcessingDuration() != 50*time.Millisecond {
+		t.Errorf("Expected server processing duration 50ms, got %v", r.ServerProcessingDuration())
+	}
+
+	if r.DataTransferDuration() != 50*time.Millisecond {
+		t.Errorf("Expected data transfer duration 50ms, got %v", r.DataTransferDuration())
+	}
+
+	if r.TTFB() != 100*time.Millisecond {
+		t.Errorf("Expected TTFB 100ms, got %v", r.TTFB())
+	}
+
+	if r.TotalDuration() != 150*time.Millisecond {
+		t.Errorf("Expected total duration 150ms, got %v", r.TotalDuration())
+	}
+}
+
+// TestResultStringWithDetailedTimings verifies String output includes all timings.
+func TestResultStringWithDetailedTimings(t *testing.T) {
+	now := time.Now()
+	r := &Result{
+		Start:             now,
+		DNSStart:          now.Add(10 * time.Millisecond),
+		DNSDone:           now.Add(20 * time.Millisecond),
+		ConnectStart:      now.Add(20 * time.Millisecond),
+		TLSHandshakeStart: now.Add(30 * time.Millisecond),
+		TLSHandshakeDone:  now.Add(50 * time.Millisecond),
+		ConnectDone:       now.Add(50 * time.Millisecond),
+		FirstByte:         now.Add(100 * time.Millisecond),
+		End:               now.Add(150 * time.Millisecond),
+	}
+
+	str := r.String()
+	
+	// Check that all timing components are present
+	if !contains(str, "total=150ms") {
+		t.Errorf("String should contain total time: %s", str)
+	}
+	if !contains(str, "dns=10ms") {
+		t.Errorf("String should contain DNS time: %s", str)
+	}
+	if !contains(str, "connect=30ms") {
+		t.Errorf("String should contain connect time: %s", str)
+	}
+	if !contains(str, "tls=20ms") {
+		t.Errorf("String should contain TLS time: %s", str)
+	}
+	if !contains(str, "ttfb=100ms") {
+		t.Errorf("String should contain TTFB: %s", str)
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || len(substr) > 0 && len(s) > len(substr) && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 1; i < len(s)-len(substr)+1; i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
