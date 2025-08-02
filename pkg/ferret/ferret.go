@@ -51,19 +51,29 @@ func New(opts ...Option) *Ferret {
 		},
 	}
 
-	// Apply options
-	for _, opt := range opts {
-		opt(f)
-	}
-
-	// Build the transport if not provided
-	if f.next == nil {
-		f.next = &http.Transport{
+	// Build the base transport first if not provided
+	baseTransport := f.next
+	if baseTransport == nil {
+		baseTransport = &http.Transport{
 			Proxy:               http.ProxyFromEnvironment,
 			DialContext:         f.dialContext,
 			TLSHandshakeTimeout: f.tlsHandshakeTimeout,
 			DisableKeepAlives:   f.disableKeepAlives,
 		}
+		f.next = baseTransport
+	}
+
+	// Apply options after base transport is set
+	for _, opt := range opts {
+		opt(f)
+	}
+	
+	// Fix up any wrapped transports that need the base transport
+	if wrapper, ok := f.next.(*otelTransport); ok && wrapper.next == nil {
+		wrapper.next = baseTransport
+	}
+	if wrapper, ok := f.next.(*prometheusTransport); ok && wrapper.next == nil {
+		wrapper.next = baseTransport
 	}
 
 	return f
