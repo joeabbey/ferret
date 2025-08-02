@@ -29,9 +29,10 @@ func TestContextCancellationBeforeRequest(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err == nil {
 		t.Error("Expected error due to cancelled context")
+		resp.Body.Close()
 	}
 
 	// Verify the error is a context error
@@ -72,11 +73,12 @@ func TestContextCancellationDuringConnection(t *testing.T) {
 	}
 
 	start := time.Now()
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	duration := time.Since(start)
 
 	if err == nil {
 		t.Error("Expected error due to context timeout")
+		resp.Body.Close()
 	}
 
 	// Verify we cancelled quickly (not waiting for full connection timeout)

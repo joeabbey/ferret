@@ -172,9 +172,10 @@ func TestOpenTelemetryWithError(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err == nil {
 		t.Fatal("Expected request to fail")
+		resp.Body.Close()
 	}
 
 	// Verify span was created and has error status
