@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/noop"
 )
 
 // mockSpan implements trace.Span for testing
@@ -49,15 +48,28 @@ func (m *mockSpan) SpanContext() trace.SpanContext {
 	return trace.SpanContext{}
 }
 
+// noopSpan is a no-op implementation of trace.Span
+type noopSpan struct{}
+
+func (noopSpan) End(...trace.SpanEndOption) {}
+func (noopSpan) AddEvent(string, ...trace.EventOption) {}
+func (noopSpan) AddLink(trace.Link) {}
+func (noopSpan) IsRecording() bool { return false }
+func (noopSpan) RecordError(error, ...trace.EventOption) {}
+func (noopSpan) SpanContext() trace.SpanContext { return trace.SpanContext{} }
+func (noopSpan) SetStatus(codes.Code, string) {}
+func (noopSpan) SetName(string) {}
+func (noopSpan) SetAttributes(...attribute.KeyValue) {}
+func (noopSpan) TracerProvider() trace.TracerProvider { return nil }
+
 // mockTracer implements trace.Tracer for testing
 type mockTracer struct {
-	noop.Tracer
 	spans []*mockSpan
 }
 
 func (m *mockTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	span := &mockSpan{
-		Span: noop.Span{},
+		Span: noopSpan{},
 		name: spanName,
 	}
 
@@ -235,9 +247,16 @@ func TestOpenTelemetryHTTPError(t *testing.T) {
 	}
 }
 
+// noopTracerProvider is a no-op implementation
+type noopTracerProvider struct{}
+
+func (noopTracerProvider) Tracer(string, ...trace.TracerOption) trace.Tracer {
+	return &mockTracer{}
+}
+
 // TestSimpleOpenTelemetryConfig verifies the simple config helper.
 func TestSimpleOpenTelemetryConfig(t *testing.T) {
-	tracer := noop.NewTracerProvider().Tracer("test")
+	tracer := noopTracerProvider{}.Tracer("test")
 	config := SimpleOpenTelemetryConfig(tracer)
 
 	if config.Tracer == nil {
