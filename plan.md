@@ -8,7 +8,7 @@ This plan outlines the implementation of the enhancements described in `enhancem
 - **Phase 2**: ✅ COMPLETED (2025-08-02) - Enhanced metrics collection
 - **Phase 3**: ✅ COMPLETED (2025-08-02) - Observability integration
 - **Phase 4**: ✅ COMPLETED (2025-08-02) - Testing and quality
-- **Phase 5**: ⏳ Not started - CLI tool enhancement
+- **Phase 5**: ✅ COMPLETED (2025-08-02) - CLI tool enhancement
 - **Phase 6**: ⏳ Not started - Documentation and release
 
 ## Phase 1: Core Safety and Architecture (Priority: Critical) ✅ COMPLETED
@@ -189,20 +189,32 @@ This plan outlines the implementation of the enhancements described in `enhancem
 - Tested HTTP/2 support, redirects, large responses
 - Added context cancellation and deadline tests
 
-## Phase 5: CLI Tool Enhancement (Priority: Low)
+## Phase 5: CLI Tool Enhancement (Priority: Low) ✅ COMPLETED
 
-### 5.1 Ferret CLI Tool
+### 5.1 Ferret CLI Tool ✅
 **Goal**: Standalone command-line tool for quick latency checks.
 
 **Tasks**:
-- [ ] Extract AWS testing logic to separate package
-- [ ] Create general-purpose CLI using new Ferret library
-- [ ] Add JSON output support
-- [ ] Add configurable iterations and concurrency
+- [x] Extract AWS testing logic to separate package
+- [x] Create general-purpose CLI using new Ferret library
+- [x] Add JSON output support
+- [x] Add configurable iterations and concurrency
 
-**Files to create**:
-- `cmd/ferret/main.go`: New CLI implementation
+**Files created**:
+- `cmd/ferret/main.go`: New CLI implementation with multiple modes
 - `internal/aws/regions.go`: AWS-specific logic
+
+### 5.2 Additional Features ✅
+**Additional work completed**:
+- [x] Implemented two modes: simple (single URL) and AWS (region testing)
+- [x] Added three output formats: text, json, and short
+- [x] Added configurable concurrency for parallel requests
+- [x] Added detailed timing breakdown option (-details flag)
+- [x] Added configurable HTTP method support
+- [x] Added timeout configuration
+- [x] Calculated advanced statistics: min, max, average, median, p90, p99
+- [x] AWS mode automatically tests all regions and sorts by latency
+- [x] Proper error handling and progress reporting
 
 ## Phase 6: Documentation and Release (Priority: Medium)
 
