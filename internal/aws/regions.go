@@ -1,3 +1,4 @@
+// Package aws provides utilities for working with AWS regions.
 package aws
 
 import (

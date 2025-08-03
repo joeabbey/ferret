@@ -1,3 +1,4 @@
+// Package main provides the ferret CLI tool for HTTP request timing analysis.
 package main
 
 import (

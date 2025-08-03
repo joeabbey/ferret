@@ -29,6 +29,7 @@ func ExampleNew() {
 	req, _ := http.NewRequest("GET", server.URL, nil)
 	resp, err := client.Do(req)
 	if err != nil {
+		server.Close()
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
@@ -77,6 +78,7 @@ func ExampleGetResult() {
 	req, _ := http.NewRequest("GET", server.URL, nil)
 	resp, err := client.Do(req)
 	if err != nil {
+		server.Close()
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()

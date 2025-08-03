@@ -278,14 +278,15 @@ func TestMultipleContextCancellations(t *testing.T) {
 
 			resp, err := client.Do(req)
 
-			if scenario.shouldError && err == nil {
+			switch {
+			case scenario.shouldError && err == nil:
 				t.Error("Expected error but got none")
 				if resp != nil {
 					resp.Body.Close()
 				}
-			} else if !scenario.shouldError && err != nil {
+			case !scenario.shouldError && err != nil:
 				t.Errorf("Unexpected error: %v", err)
-			} else if resp != nil {
+			case resp != nil:
 				resp.Body.Close()
 			}
 		})

@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 // mockSpan implements trace.Span for testing
@@ -55,9 +56,13 @@ type mockTracer struct {
 	spans []*mockSpan
 }
 
-func (m *mockTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+func (m *mockTracer) Start(
+	ctx context.Context,
+	spanName string,
+	opts ...trace.SpanStartOption,
+) (context.Context, trace.Span) {
 	// Use the built-in noop span as base
-	noopTP := trace.NewNoopTracerProvider()
+	noopTP := noop.NewTracerProvider()
 	noopTracer := noopTP.Tracer("test")
 	_, noopSpan := noopTracer.Start(ctx, "noop")
 	
@@ -177,10 +182,9 @@ func TestOpenTelemetryWithError(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	resp, err := client.Do(req)
+	_, err = client.Do(req)
 	if err == nil {
 		t.Fatal("Expected request to fail")
-		resp.Body.Close()
 	}
 
 	// Verify span was created and has error status

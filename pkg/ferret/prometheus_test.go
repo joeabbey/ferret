@@ -129,10 +129,9 @@ func TestPrometheusWithError(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	resp, err := client.Do(req)
+	_, err = client.Do(req)
 	if err == nil {
 		t.Fatal("Expected request to fail")
-		resp.Body.Close()
 	}
 
 	// Check error counter

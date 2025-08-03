@@ -67,7 +67,7 @@ func main() {
 	}
 
 	if !*follow {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(_ *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}
@@ -182,7 +182,7 @@ func printResult(r Result, iteration int) {
 	)
 }
 
-func printSummary(results []Result, iterations int) {
+func printSummary(results []Result, _ int) {
 	fmt.Println("\n=== Summary ===")
 
 	// Group by URL

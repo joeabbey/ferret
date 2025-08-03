@@ -424,7 +424,21 @@ func TestResultStringWithDetailedTimings(t *testing.T) {
 }
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || len(substr) > 0 && len(s) > len(substr) && findSubstring(s, substr)))
+	if len(s) < len(substr) {
+		return false
+	}
+	if s == substr {
+		return true
+	}
+	if len(s) > len(substr) {
+		if s[:len(substr)] == substr || s[len(s)-len(substr):] == substr {
+			return true
+		}
+		if len(substr) > 0 {
+			return findSubstring(s, substr)
+		}
+	}
+	return false
 }
 
 func findSubstring(s, substr string) bool {

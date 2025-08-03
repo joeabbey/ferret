@@ -31,7 +31,7 @@ type Ferret struct {
 }
 
 // NewFerret creates a new Ferret transport with default settings.
-// DEPRECATED: Use New() with options instead.
+// Deprecated: Use New() with options instead.
 func NewFerret() *Ferret {
 	return New(
 		WithKeepAlives(false),
@@ -168,7 +168,7 @@ func resultFromContext(ctx context.Context) *Result {
 // These methods are DEPRECATED and will be removed in a future version.
 
 // ReqDuration returns the request duration.
-// DEPRECATED: Use Result(req).RequestDuration() instead.
+// Deprecated: Use Result(req).RequestDuration() instead.
 func (f *Ferret) ReqDuration() time.Duration {
 	// This method cannot work correctly in concurrent scenarios
 	// Return 0 to indicate unavailable
@@ -176,7 +176,7 @@ func (f *Ferret) ReqDuration() time.Duration {
 }
 
 // ConnDuration returns the connection duration.
-// DEPRECATED: Use Result(req).ConnectionDuration() instead.
+// Deprecated: Use Result(req).ConnectionDuration() instead.
 func (f *Ferret) ConnDuration() time.Duration {
 	// This method cannot work correctly in concurrent scenarios
 	// Return 0 to indicate unavailable
@@ -184,7 +184,7 @@ func (f *Ferret) ConnDuration() time.Duration {
 }
 
 // Duration returns the total duration.
-// DEPRECATED: Use Result(req).TotalDuration() instead.
+// Deprecated: Use Result(req).TotalDuration() instead.
 func (f *Ferret) Duration() time.Duration {
 	// This method cannot work correctly in concurrent scenarios
 	// Return 0 to indicate unavailable

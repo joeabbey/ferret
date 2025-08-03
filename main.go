@@ -1,3 +1,4 @@
+// Package main provides a visual latency checker for AWS regions.
 package main
 
 import (
@@ -71,7 +72,7 @@ func findNearestEndpoint(prefix string, endpoints []string, suffix string, itera
 	sem := make(chan bool, maxConcurrent)
 	var mtx sync.Mutex
 	var wg sync.WaitGroup
-	var results [][]time.Duration
+	results := make([][]time.Duration, 0, len(endpoints))
 
 	tableView := widgets.NewTable()
 	tableView.ColumnWidths = []int{15, 7}
@@ -164,11 +165,11 @@ func computeAverages(results [][]time.Duration, tableView *widgets.Table) {
 		var sum time.Duration
 		for _, result := range row {
 			if result != time.Duration(0) {
-				sum = sum + result
+				sum += result
 			}
 		}
 
-		//No this isn't a duration, but it makes the types match
+		// No this isn't a duration, but it makes the types match
 		iterations := time.Duration(len(row) - 1)
 		average := sum / iterations
 
@@ -201,11 +202,12 @@ func colorizeRows(tableView *widgets.Table) {
 		if err != nil {
 			continue
 		}
-		if avg < d100ms {
+		switch {
+		case avg < d100ms:
 			tableView.RowStyles[i] = ui.NewStyle(ui.ColorGreen)
-		} else if avg < d250ms {
+		case avg < d250ms:
 			tableView.RowStyles[i] = ui.NewStyle(ui.ColorYellow)
-		} else {
+		default:
 			tableView.RowStyles[i] = ui.NewStyle(ui.ColorRed)
 		}
 	}

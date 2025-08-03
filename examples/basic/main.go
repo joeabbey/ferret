@@ -30,13 +30,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
-
 	// Get timing information
 	result := ferret.GetResult(resp.Request)
 	if result == nil {
+		resp.Body.Close()
 		log.Fatal("No timing information available")
 	}
+	defer resp.Body.Close()
 
 	// Display timing breakdown
 	fmt.Printf("\nTiming breakdown for %s:\n", req.URL)
