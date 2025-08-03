@@ -69,12 +69,19 @@ func TestConcurrentRequests(t *testing.T) {
 		}
 
 		// Verify timing data
-		if results[i].ConnectionDuration() <= 0 {
-			t.Errorf("Request %d: invalid connection duration: %v", i, results[i].ConnectionDuration())
+		// On Windows, timing might be zero due to clock resolution
+		connDur := results[i].ConnectionDuration()
+		if connDur < 0 {
+			t.Errorf("Request %d: connection duration should not be negative: %v", i, connDur)
+		} else if connDur == 0 && runtime.GOOS != "windows" {
+			t.Errorf("Request %d: invalid connection duration: %v", i, connDur)
 		}
 
-		if results[i].TotalDuration() <= 0 {
-			t.Errorf("Request %d: invalid total duration: %v", i, results[i].TotalDuration())
+		totalDur := results[i].TotalDuration()
+		if totalDur < 0 {
+			t.Errorf("Request %d: total duration should not be negative: %v", i, totalDur)
+		} else if totalDur == 0 && runtime.GOOS != "windows" {
+			t.Errorf("Request %d: invalid total duration: %v", i, totalDur)
 		}
 
 		if results[i].TotalDuration() < results[i].ConnectionDuration() {
