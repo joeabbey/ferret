@@ -34,7 +34,13 @@ jobs:
       run: go mod download
 
     - name: Run tests
-      run: go test -v -race -coverprofile=coverage.out ./pkg/...
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          go test -v -race -coverprofile coverage.out ./pkg/...
+        else
+          go test -v -race -coverprofile=coverage.out ./pkg/...
+        fi
+      shell: bash
 
     - name: Upload coverage
       if: matrix.os == 'ubuntu-latest' && matrix.go == '1.23'
