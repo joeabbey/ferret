@@ -347,8 +347,15 @@ func TestIntegrationLargeResponse(t *testing.T) {
 	}
 
 	// TTFB should be less than total duration
-	if result.TTFB() > 0 && result.TotalDuration() > 0 && result.TTFB() >= result.TotalDuration() {
-		t.Error("TTFB should be less than total duration")
+	// On Windows, due to timing resolution, TTFB might equal TotalDuration for fast operations
+	ttfb := result.TTFB()
+	total := result.TotalDuration()
+	if ttfb > 0 && total > 0 {
+		if ttfb > total {
+			t.Error("TTFB should not be greater than total duration")
+		} else if ttfb == total && runtime.GOOS != "windows" {
+			t.Error("TTFB should be less than total duration")
+		}
 	}
 }
 
