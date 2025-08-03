@@ -92,22 +92,22 @@ func (f *Ferret) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	// Create httptrace client trace
 	trace := &httptrace.ClientTrace{
-		DNSStart: func(info httptrace.DNSStartInfo) {
+		DNSStart: func(_ httptrace.DNSStartInfo) {
 			result.DNSStart = f.clock()
 		},
-		DNSDone: func(info httptrace.DNSDoneInfo) {
+		DNSDone: func(_ httptrace.DNSDoneInfo) {
 			result.DNSDone = f.clock()
 		},
-		ConnectStart: func(network, addr string) {
+		ConnectStart: func(_, _ string) {
 			result.ConnectStart = f.clock()
 		},
-		ConnectDone: func(network, addr string, err error) {
+		ConnectDone: func(_, _ string, _ error) {
 			result.ConnectDone = f.clock()
 		},
 		TLSHandshakeStart: func() {
 			result.TLSHandshakeStart = f.clock()
 		},
-		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
+		TLSHandshakeDone: func(_ tls.ConnectionState, _ error) {
 			result.TLSHandshakeDone = f.clock()
 		},
 		GotFirstResponseByte: func() {

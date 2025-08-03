@@ -165,7 +165,7 @@ func ExtractSpanContext(req *http.Request) trace.SpanContext {
 
 // InjectSpanContext injects a span context into an HTTP request.
 // This is useful for propagating trace context across service boundaries.
-func InjectSpanContext(req *http.Request, sc trace.SpanContext) {
+func InjectSpanContext(_ *http.Request, _ trace.SpanContext) {
 	// This would typically use the OpenTelemetry propagator API
 	// For now, we'll just document that users should use the propagator
 	// Example:

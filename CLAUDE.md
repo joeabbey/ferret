@@ -31,7 +31,7 @@ go build -v -o ferret-tui .
 
 ### Linting and Code Quality
 ```bash
-# Run linter (golangci-lint v2.3.0)
+# Run linter (golangci-lint v2.3.0) - ALWAYS run before committing
 golangci-lint run
 
 # Format code
@@ -43,6 +43,9 @@ go vet ./...
 
 ### Git Workflow
 ```bash
+# IMPORTANT: Always run golangci-lint before pushing changes
+golangci-lint run
+
 # Check PR status
 gh pr view <number>
 
@@ -52,6 +55,13 @@ gh pr checks <number>
 # Create new PR
 gh pr create --title "Title" --body "Description"
 ```
+
+### Pre-Push Checklist
+**ALWAYS complete these steps before pushing changes:**
+1. Run `golangci-lint run` and fix any issues
+2. Run tests: `go test -v -race ./pkg/...`
+3. Verify formatting: `gofmt -s -w .`
+4. Check for any uncommitted changes: `git status`
 
 ## High-Level Architecture
 
@@ -140,6 +150,8 @@ The project uses GitHub Actions with the following jobs:
 2. **Linter Configuration**: The project uses golangci-lint v2 with a minimal configuration due to v2's strict schema requirements.
 
 3. **Deprecated APIs**: The codebase has been updated to avoid deprecated Go standard library functions (e.g., io/ioutil).
+
+4. **Linter Failures in CI**: Always run `golangci-lint run` locally before pushing to avoid CI failures. The CI will reject PRs with linting issues.
 
 ## Code Style Guidelines
 

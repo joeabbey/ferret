@@ -255,7 +255,7 @@ func performRequest(client *http.Client, url, method string, iteration int) Requ
 			Error:     err.Error(),
 		}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Consume body
 	_, _ = io.Copy(io.Discard, resp.Body)

@@ -16,15 +16,15 @@ func TestHighConcurrency(t *testing.T) {
 	var activeRequests int32
 	var maxConcurrent int32
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Track concurrent requests
 		current := atomic.AddInt32(&activeRequests, 1)
 		defer atomic.AddInt32(&activeRequests, -1)
 
 		// Update max if needed
 		for {
-			max := atomic.LoadInt32(&maxConcurrent)
-			if current <= max || atomic.CompareAndSwapInt32(&maxConcurrent, max, current) {
+			maxVal := atomic.LoadInt32(&maxConcurrent)
+			if current <= maxVal || atomic.CompareAndSwapInt32(&maxConcurrent, maxVal, current) {
 				break
 			}
 		}
@@ -32,7 +32,7 @@ func TestHighConcurrency(t *testing.T) {
 		// Simulate some work
 		time.Sleep(10 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -50,7 +50,7 @@ func TestHighConcurrency(t *testing.T) {
 	// Launch concurrent requests
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
-		go func(workerID int) {
+		go func(_ int) {
 			defer wg.Done()
 
 			for j := 0; j < iterations; j++ {
@@ -78,7 +78,7 @@ func TestHighConcurrency(t *testing.T) {
 					errors <- err
 				}
 
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}(i)
 	}
@@ -127,7 +127,7 @@ func TestConcurrentWithMultipleTransports(t *testing.T) {
 	for i, client := range clients {
 		for j := 0; j < iterations; j++ {
 			wg.Add(1)
-			go func(transportID int, iterID int) {
+			go func(transportID int, _ int) {
 				defer wg.Done()
 
 				req, err := http.NewRequest("GET", server.URL, nil)
@@ -142,7 +142,7 @@ func TestConcurrentWithMultipleTransports(t *testing.T) {
 					t.Errorf("Request failed: %v", err)
 					return
 				}
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 
 				// Verify we used the right transport
 				if resp.Header.Get("X-Transport-ID") != fmt.Sprintf("%d", transportID) {
@@ -168,7 +168,7 @@ func TestConcurrentWithMultipleTransports(t *testing.T) {
 
 // TestRaceConditionWithOptions verifies option application is thread-safe.
 func TestRaceConditionWithOptions(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -201,7 +201,7 @@ func TestRaceConditionWithOptions(t *testing.T) {
 				t.Errorf("Request failed: %v", err)
 				return
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}(i)
 	}
 
@@ -242,7 +242,7 @@ func TestConcurrentMetricsCollection(t *testing.T) {
 				t.Errorf("Request %d failed: %v", index, err)
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			results[index] = GetResult(resp.Request)
 		}(i)

@@ -15,7 +15,7 @@
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-//	defer resp.Body.Close()
+//	defer func() { _ = resp.Body.Close() }()
 //
 //	result := ferret.GetResult(resp.Request)
 //	if result != nil {

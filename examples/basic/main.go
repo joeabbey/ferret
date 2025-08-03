@@ -33,10 +33,10 @@ func main() {
 	// Get timing information
 	result := ferret.GetResult(resp.Request)
 	if result == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		log.Fatal("No timing information available")
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Display timing breakdown
 	fmt.Printf("\nTiming breakdown for %s:\n", req.URL)

@@ -15,9 +15,9 @@ import (
 // ExampleNew demonstrates basic usage of Ferret.
 func ExampleNew() {
 	// Create a test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, World!"))
+		_, _ = w.Write([]byte("Hello, World!"))
 	}))
 	defer server.Close()
 
@@ -29,10 +29,10 @@ func ExampleNew() {
 	req, _ := http.NewRequest("GET", server.URL, nil)
 	resp, err := client.Do(req)
 	if err != nil {
-		server.Close()
-		log.Fatal(err)
+		fmt.Printf("Request failed: %v\n", err)
+		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Get timing information
 	result := ferret.GetResult(resp.Request)
@@ -58,14 +58,14 @@ func ExampleNew_withOptions() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	fmt.Printf("Status: %s\n", resp.Status)
 }
 
 // ExampleGetResult demonstrates retrieving timing information.
 func ExampleGetResult() {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Simulate some processing time
 		time.Sleep(50 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
@@ -78,10 +78,10 @@ func ExampleGetResult() {
 	req, _ := http.NewRequest("GET", server.URL, nil)
 	resp, err := client.Do(req)
 	if err != nil {
-		server.Close()
-		log.Fatal(err)
+		fmt.Printf("Request failed: %v\n", err)
+		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Get detailed timing information
 	result := ferret.GetResult(resp.Request)
@@ -121,14 +121,14 @@ func ExampleWithPrometheus() {
 	// Make requests - metrics will be automatically collected
 	resp, err := client.Get("https://example.com")
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		fmt.Println("Request completed, metrics collected")
 	}
 }
 
 // ExampleNew_concurrentRequests demonstrates concurrent usage.
 func ExampleNew_concurrentRequests() {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -150,7 +150,7 @@ func ExampleNew_concurrentRequests() {
 				log.Printf("Request %d failed: %v", id, err)
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			result := ferret.GetResult(resp.Request)
 			if result != nil {

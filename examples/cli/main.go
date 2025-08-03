@@ -67,7 +67,7 @@ func main() {
 	}
 
 	if !*follow {
-		client.CheckRedirect = func(_ *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}
@@ -138,7 +138,7 @@ func testURL(client *http.Client, method, url string, includeHeaders bool) Resul
 		result.Error = err.Error()
 		return result
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result.Status = resp.StatusCode
 

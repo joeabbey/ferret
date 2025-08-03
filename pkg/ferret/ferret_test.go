@@ -12,10 +12,10 @@ import (
 // TestConcurrentRequests verifies that Ferret is safe for concurrent use.
 func TestConcurrentRequests(t *testing.T) {
 	// Create a test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(10 * time.Millisecond) // Simulate some processing
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -46,7 +46,7 @@ func TestConcurrentRequests(t *testing.T) {
 				errors[index] = err
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// Get the result from the response's request
 			results[index] = GetResult(resp.Request)
@@ -211,10 +211,10 @@ func TestLegacyMethods(t *testing.T) {
 // TestHTTPTraceIntegration verifies httptrace timing capture.
 func TestHTTPTraceIntegration(t *testing.T) {
 	// Create a test server that supports HTTPS
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(5 * time.Millisecond) // Simulate processing
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, World!"))
+		_, _ = w.Write([]byte("Hello, World!"))
 	}))
 	defer server.Close()
 
@@ -234,7 +234,7 @@ func TestHTTPTraceIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Get result
 	result := GetResult(resp.Request)
@@ -298,9 +298,9 @@ func TestHTTPTraceIntegration(t *testing.T) {
 
 // TestHTTPTraceWithPlainHTTP verifies httptrace works without TLS.
 func TestHTTPTraceWithPlainHTTP(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -316,7 +316,7 @@ func TestHTTPTraceWithPlainHTTP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result := GetResult(resp.Request)
 	if result == nil {

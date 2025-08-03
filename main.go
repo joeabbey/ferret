@@ -147,7 +147,7 @@ func measureDuration(url string) (time.Duration, error) {
 	if err != nil {
 		return time.Duration(0), err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	_, _ = io.Copy(io.Discard, resp.Body)
 

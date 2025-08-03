@@ -13,10 +13,10 @@ import (
 // TestPrometheusIntegration verifies Prometheus metrics collection.
 func TestPrometheusIntegration(t *testing.T) {
 	// Create test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(10 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -64,7 +64,7 @@ func TestPrometheusIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify metrics were collected
 	// Check counter
@@ -129,9 +129,12 @@ func TestPrometheusWithError(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err == nil {
 		t.Fatal("Expected request to fail")
+	}
+	if resp != nil {
+		_ = resp.Body.Close()
 	}
 
 	// Check error counter
@@ -150,7 +153,7 @@ func TestPrometheusWithError(t *testing.T) {
 // TestPrometheusInFlight verifies in-flight gauge.
 func TestPrometheusInFlight(t *testing.T) {
 	// Create test server with delay
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(50 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -179,7 +182,7 @@ func TestPrometheusInFlight(t *testing.T) {
 		req, _ := http.NewRequest("GET", server.URL, nil)
 		resp, _ := client.Do(req)
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 		done <- true
 	}()
@@ -236,7 +239,7 @@ func TestSimplePrometheusConfig(t *testing.T) {
 
 // TestWithSimplePrometheus verifies the convenience option.
 func TestWithSimplePrometheus(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -251,7 +254,7 @@ func TestWithSimplePrometheus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Just verify it doesn't panic
 	// Actual metrics verification would require access to the internal histogram
