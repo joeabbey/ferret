@@ -1,0 +1,99 @@
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: ferret-cli
+    main: ./cmd/ferret
+    binary: ferret
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+  - id: ferret-tui
+    main: .
+    binary: ferret-tui
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: ferret
+    builds:
+      - ferret-cli
+    name_template: >-
+      ferret_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+
+  - id: ferret-tui
+    builds:
+      - ferret-tui
+    name_template: >-
+      ferret-tui_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+
+release:
+  github:
+    owner: joeabbey
+    name: ferret
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+  header: |
+    ## Ferret v{{.Version}}
+    
+    ### Installation
+    
+    **CLI Tool:**
+    ```bash
+    go install github.com/joeabbey/ferret/cmd/ferret@v{{.Version}}
+    ```
+    
+    **Library:**
+    ```bash
+    go get github.com/joeabbey/ferret/pkg/ferret@v{{.Version}}
+    ```

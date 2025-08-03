@@ -24,7 +24,7 @@ type mockSpan struct {
 	ended      bool
 }
 
-func (m *mockSpan) End(options ...trace.SpanEndOption) {
+func (m *mockSpan) End(_ ...trace.SpanEndOption) {
 	m.ended = true
 }
 
@@ -37,9 +37,9 @@ func (m *mockSpan) SetStatus(code codes.Code, description string) {
 	m.statusDesc = description
 }
 
-func (m *mockSpan) RecordError(err error, options ...trace.EventOption) {}
+func (m *mockSpan) RecordError(_ error, _ ...trace.EventOption) {}
 
-func (m *mockSpan) AddEvent(name string, options ...trace.EventOption) {
+func (m *mockSpan) AddEvent(name string, _ ...trace.EventOption) {
 	m.events = append(m.events, name)
 }
 
@@ -49,32 +49,42 @@ func (m *mockSpan) SpanContext() trace.SpanContext {
 	return trace.SpanContext{}
 }
 
+
 // mockTracer implements trace.Tracer for testing
 type mockTracer struct {
-	noop.Tracer
+	trace.Tracer
 	spans []*mockSpan
 }
 
-func (m *mockTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+func (m *mockTracer) Start(
+	ctx context.Context,
+	spanName string,
+	opts ...trace.SpanStartOption,
+) (context.Context, trace.Span) {
+	// Use the built-in noop span as base
+	noopTP := noop.NewTracerProvider()
+	noopTracer := noopTP.Tracer("test")
+	_, noopSpan := noopTracer.Start(ctx, "noop")
+	
 	span := &mockSpan{
-		Span: noop.Span{},
+		Span: noopSpan,
 		name: spanName,
 	}
-	
+
 	// Apply span start options to capture initial attributes
 	cfg := trace.NewSpanStartConfig(opts...)
 	span.attributes = append(span.attributes, cfg.Attributes()...)
-	
+
 	m.spans = append(m.spans, span)
 	return trace.ContextWithSpan(ctx, span), span
 }
 
 // TestOpenTelemetryIntegration verifies OpenTelemetry tracing.
 func TestOpenTelemetryIntegration(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(10 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -98,7 +108,7 @@ func TestOpenTelemetryIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify span was created
 	if len(tracer.spans) != 1 {
@@ -120,7 +130,7 @@ func TestOpenTelemetryIntegration(t *testing.T) {
 	// Verify key attributes are present
 	hasStatusCode := false
 	hasMethod := false
-	
+
 	for _, attr := range span.attributes {
 		switch string(attr.Key) {
 		case "http.method":
@@ -172,9 +182,12 @@ func TestOpenTelemetryWithError(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err == nil {
 		t.Fatal("Expected request to fail")
+	}
+	if resp != nil {
+		_ = resp.Body.Close()
 	}
 
 	// Verify span was created and has error status
@@ -190,9 +203,9 @@ func TestOpenTelemetryWithError(t *testing.T) {
 
 // TestOpenTelemetryHTTPError verifies handling of HTTP errors.
 func TestOpenTelemetryHTTPError(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Error"))
+		_, _ = w.Write([]byte("Error"))
 	}))
 	defer server.Close()
 
@@ -209,7 +222,7 @@ func TestOpenTelemetryHTTPError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify span has error status for 5xx response
 	if len(tracer.spans) != 1 {
@@ -236,7 +249,7 @@ func TestOpenTelemetryHTTPError(t *testing.T) {
 
 // TestSimpleOpenTelemetryConfig verifies the simple config helper.
 func TestSimpleOpenTelemetryConfig(t *testing.T) {
-	tracer := noop.NewTracerProvider().Tracer("test")
+	tracer := &mockTracer{}
 	config := SimpleOpenTelemetryConfig(tracer)
 
 	if config.Tracer == nil {
@@ -261,7 +274,7 @@ func TestSimpleOpenTelemetryConfig(t *testing.T) {
 
 // TestCustomSpanNameFormatter verifies custom span naming.
 func TestCustomSpanNameFormatter(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -279,7 +292,7 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", server.URL, nil)
 	resp, _ := client.Do(req)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if len(tracer.spans) != 1 {
 		t.Fatalf("Expected 1 span, got %d", len(tracer.spans))

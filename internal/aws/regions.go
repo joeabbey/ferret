@@ -1,3 +1,4 @@
+// Package aws provides utilities for working with AWS regions.
 package aws
 
 import (
@@ -38,3 +39,4 @@ func GetRegions() []Region {
 func GetEC2Endpoint(regionID string) string {
 	return fmt.Sprintf("https://ec2.%s.amazonaws.com/ping", regionID)
 }
+

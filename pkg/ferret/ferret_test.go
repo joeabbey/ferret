@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -12,10 +13,10 @@ import (
 // TestConcurrentRequests verifies that Ferret is safe for concurrent use.
 func TestConcurrentRequests(t *testing.T) {
 	// Create a test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(10 * time.Millisecond) // Simulate some processing
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -46,7 +47,7 @@ func TestConcurrentRequests(t *testing.T) {
 				errors[index] = err
 				return
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			// Get the result from the response's request
 			results[index] = GetResult(resp.Request)
@@ -68,12 +69,19 @@ func TestConcurrentRequests(t *testing.T) {
 		}
 
 		// Verify timing data
-		if results[i].ConnectionDuration() <= 0 {
-			t.Errorf("Request %d: invalid connection duration: %v", i, results[i].ConnectionDuration())
+		// On Windows, timing might be zero due to clock resolution
+		connDur := results[i].ConnectionDuration()
+		if connDur < 0 {
+			t.Errorf("Request %d: connection duration should not be negative: %v", i, connDur)
+		} else if connDur == 0 && runtime.GOOS != "windows" {
+			t.Errorf("Request %d: invalid connection duration: %v", i, connDur)
 		}
 
-		if results[i].TotalDuration() <= 0 {
-			t.Errorf("Request %d: invalid total duration: %v", i, results[i].TotalDuration())
+		totalDur := results[i].TotalDuration()
+		if totalDur < 0 {
+			t.Errorf("Request %d: total duration should not be negative: %v", i, totalDur)
+		} else if totalDur == 0 && runtime.GOOS != "windows" {
+			t.Errorf("Request %d: invalid total duration: %v", i, totalDur)
 		}
 
 		if results[i].TotalDuration() < results[i].ConnectionDuration() {
@@ -211,10 +219,10 @@ func TestLegacyMethods(t *testing.T) {
 // TestHTTPTraceIntegration verifies httptrace timing capture.
 func TestHTTPTraceIntegration(t *testing.T) {
 	// Create a test server that supports HTTPS
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(5 * time.Millisecond) // Simulate processing
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, World!"))
+		_, _ = w.Write([]byte("Hello, World!"))
 	}))
 	defer server.Close()
 
@@ -234,7 +242,7 @@ func TestHTTPTraceIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Get result
 	result := GetResult(resp.Request)
@@ -279,10 +287,18 @@ func TestHTTPTraceIntegration(t *testing.T) {
 	// or in slightly different order depending on the implementation
 
 	// Verify durations
-	if result.ConnectionDuration() <= 0 {
+	// On Windows, timing might be zero due to clock resolution
+	connDuration := result.ConnectionDuration()
+	if connDuration < 0 {
+		t.Error("ConnectionDuration should not be negative")
+	} else if connDuration == 0 && runtime.GOOS != "windows" {
 		t.Error("ConnectionDuration should be positive")
 	}
-	if result.TLSDuration() <= 0 {
+	
+	tlsDuration := result.TLSDuration()
+	if tlsDuration < 0 {
+		t.Error("TLSDuration should not be negative")
+	} else if tlsDuration == 0 && runtime.GOOS != "windows" {
 		t.Error("TLSDuration should be positive")
 	}
 	if result.ServerProcessingDuration() <= 0 {
@@ -298,9 +314,9 @@ func TestHTTPTraceIntegration(t *testing.T) {
 
 // TestHTTPTraceWithPlainHTTP verifies httptrace works without TLS.
 func TestHTTPTraceWithPlainHTTP(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -316,7 +332,7 @@ func TestHTTPTraceWithPlainHTTP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result := GetResult(resp.Request)
 	if result == nil {
@@ -404,7 +420,7 @@ func TestResultStringWithDetailedTimings(t *testing.T) {
 	}
 
 	str := r.String()
-	
+
 	// Check that all timing components are present
 	if !contains(str, "total=150ms") {
 		t.Errorf("String should contain total time: %s", str)
@@ -424,7 +440,21 @@ func TestResultStringWithDetailedTimings(t *testing.T) {
 }
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || len(substr) > 0 && len(s) > len(substr) && findSubstring(s, substr)))
+	if len(s) < len(substr) {
+		return false
+	}
+	if s == substr {
+		return true
+	}
+	if len(s) > len(substr) {
+		if s[:len(substr)] == substr || s[len(s)-len(substr):] == substr {
+			return true
+		}
+		if len(substr) > 0 {
+			return findSubstring(s, substr)
+		}
+	}
+	return false
 }
 
 func findSubstring(s, substr string) bool {

@@ -13,13 +13,13 @@ import (
 type PrometheusConfig struct {
 	// Histogram for tracking phase durations
 	DurationHistogram *prometheus.HistogramVec
-	
+
 	// Optional: Counter for total requests
 	RequestCounter *prometheus.CounterVec
-	
+
 	// Optional: Gauge for in-flight requests
 	InFlightGauge prometheus.Gauge
-	
+
 	// Whether to include detailed phase metrics
 	DetailedMetrics bool
 }
@@ -59,7 +59,7 @@ func (t *prometheusTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	if result == nil && resp != nil && resp.Request != nil {
 		result = GetResult(resp.Request)
 	}
-	
+
 	if result != nil {
 		// Extract labels
 		method := req.Method
@@ -253,8 +253,8 @@ func WithSimplePrometheus() Option {
 		// Create metrics but don't register them - let the user decide
 		hist := prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name: fmt.Sprintf("ferret_http_duration_seconds_%d", time.Now().Unix()),
-				Help: "Duration of HTTP request phases in seconds",
+				Name:    fmt.Sprintf("ferret_http_duration_seconds_%d", time.Now().Unix()),
+				Help:    "Duration of HTTP request phases in seconds",
 				Buckets: prometheus.DefBuckets,
 			},
 			[]string{"phase", "method", "host", "code", "status"},

@@ -1,0 +1,34 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - gocritic
+    - gosec
+    - dupl
+    - unconvert
+    - nakedret
+    - prealloc
+    - misspell
+    - lll
+    - unparam
+    - dogsled
+    - bodyclose
+    - asciicheck
+    - rowserrcheck
+    - makezero
+    - durationcheck
+    - predeclared
+    - revive
+    - whitespace
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

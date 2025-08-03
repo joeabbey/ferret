@@ -11,7 +11,7 @@ import (
 
 // TestContextCancellationBeforeRequest verifies cancellation before request starts.
 func TestContextCancellationBeforeRequest(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Error("Handler should not be called")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -29,9 +29,10 @@ func TestContextCancellationBeforeRequest(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	if err == nil {
 		t.Error("Expected error due to cancelled context")
+		_ = resp.Body.Close()
 	}
 
 	// Verify the error is a context error
@@ -47,7 +48,7 @@ func TestContextCancellationDuringConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create listener: %v", err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	// Don't accept connections immediately
 	go func() {
@@ -56,7 +57,7 @@ func TestContextCancellationDuringConnection(t *testing.T) {
 		if err != nil {
 			return
 		}
-		conn.Close()
+		_ = conn.Close()
 	}()
 
 	ferret := New(WithTimeout(5*time.Second, 0))
@@ -72,11 +73,12 @@ func TestContextCancellationDuringConnection(t *testing.T) {
 	}
 
 	start := time.Now()
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
 	duration := time.Since(start)
 
 	if err == nil {
 		t.Error("Expected error due to context timeout")
+		_ = resp.Body.Close()
 	}
 
 	// Verify we cancelled quickly (not waiting for full connection timeout)
@@ -117,7 +119,7 @@ func TestContextCancellationDuringRequest(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error due to context timeout")
 		if resp != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	}
 
@@ -140,7 +142,7 @@ func TestContextCancellationDuringRequest(t *testing.T) {
 
 // TestContextWithDeadline verifies deadline handling.
 func TestContextWithDeadline(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Check if request has deadline - note that the deadline might not
 		// be directly visible in the request context due to transport layers
 		w.WriteHeader(http.StatusOK)
@@ -164,7 +166,7 @@ func TestContextWithDeadline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify timing data is complete
 	result := GetResult(resp.Request)
@@ -179,7 +181,7 @@ func TestContextWithDeadline(t *testing.T) {
 
 // TestContextPropagation verifies context values are used by Ferret.
 func TestContextPropagation(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Context values might not propagate through HTTP transport layers
 		// This is expected behavior - context is used for cancellation and deadlines
 		w.WriteHeader(http.StatusOK)
@@ -201,7 +203,7 @@ func TestContextPropagation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify Ferret's context usage (result storage)
 	result := GetResult(resp.Request)
@@ -212,7 +214,7 @@ func TestContextPropagation(t *testing.T) {
 
 // TestMultipleContextCancellations verifies handling of multiple cancellations.
 func TestMultipleContextCancellations(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(50 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -276,16 +278,18 @@ func TestMultipleContextCancellations(t *testing.T) {
 
 			resp, err := client.Do(req)
 
-			if scenario.shouldError && err == nil {
+			switch {
+			case scenario.shouldError && err == nil:
 				t.Error("Expected error but got none")
 				if resp != nil {
-					resp.Body.Close()
+					_ = resp.Body.Close()
 				}
-			} else if !scenario.shouldError && err != nil {
+			case !scenario.shouldError && err != nil:
 				t.Errorf("Unexpected error: %v", err)
-			} else if resp != nil {
-				resp.Body.Close()
+			case resp != nil:
+				_ = resp.Body.Close()
 			}
 		})
 	}
 }
+

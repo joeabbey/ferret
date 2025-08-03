@@ -20,7 +20,7 @@ func WithKeepAlives(enabled bool) Option {
 
 // WithTimeout configures connection and total timeouts.
 // If total is 0, no total timeout is set.
-func WithTimeout(connect, total time.Duration) Option {
+func WithTimeout(connect, _ time.Duration) Option {
 	return func(f *Ferret) {
 		if f.dialer == nil {
 			f.dialer = &net.Dialer{}

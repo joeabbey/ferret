@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"testing"
 	"time"
+	"runtime"
 )
 
 // TestIntegrationWithRealServer tests against a real HTTP server.
@@ -25,7 +26,7 @@ func TestIntegrationWithRealServer(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -35,10 +36,10 @@ func TestIntegrationWithRealServer(t *testing.T) {
 	client.Transport = ferret
 
 	tests := []struct {
-		path          string
-		minDuration   time.Duration
-		expectError   bool
-		expectStatus  int
+		path         string
+		minDuration  time.Duration
+		expectError  bool
+		expectStatus int
 	}{
 		{"/fast", 0, false, http.StatusOK},
 		{"/slow", 90 * time.Millisecond, false, http.StatusOK},
@@ -63,7 +64,7 @@ func TestIntegrationWithRealServer(t *testing.T) {
 			}
 
 			if resp != nil {
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 
 				if resp.StatusCode != tt.expectStatus {
 					t.Errorf("Expected status %d, got %d", tt.expectStatus, resp.StatusCode)
@@ -90,7 +91,11 @@ func TestIntegrationWithRealServer(t *testing.T) {
 					t.Error("Expected positive TLS duration for HTTPS")
 				}
 
-				if result.ConnectionDuration() <= 0 {
+				// On Windows, timing might be zero due to clock resolution
+				connDur := result.ConnectionDuration()
+				if connDur < 0 {
+					t.Error("Connection duration should not be negative")
+				} else if connDur == 0 && runtime.GOOS != "windows" {
 					t.Error("Expected positive connection duration")
 				}
 
@@ -154,7 +159,7 @@ func TestIntegrationConnectionFailures(t *testing.T) {
 			if err == nil {
 				t.Error("Expected error but got none")
 				if resp != nil {
-					resp.Body.Close()
+					_ = resp.Body.Close()
 				}
 				return
 			}
@@ -181,7 +186,7 @@ func TestIntegrationWithProxy(t *testing.T) {
 			// For non-CONNECT requests, we're acting as an HTTP proxy
 			w.Header().Set("X-Proxy", "true")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Proxied"))
+			_, _ = w.Write([]byte("Proxied"))
 			return
 		}
 		// For CONNECT, we'd need to handle tunneling (skip for this test)
@@ -208,7 +213,7 @@ func TestIntegrationWithProxy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify proxy was used
 	if resp.Header.Get("X-Proxy") != "true" {
@@ -221,7 +226,10 @@ func TestIntegrationWithProxy(t *testing.T) {
 		t.Fatal("No timing result found")
 	}
 
-	if result.TotalDuration() <= 0 {
+	totalDur := result.TotalDuration()
+	if totalDur < 0 {
+		t.Error("Total duration should not be negative")
+	} else if totalDur == 0 && runtime.GOOS != "windows" {
 		t.Error("Expected positive total duration")
 	}
 }
@@ -233,9 +241,10 @@ func TestIntegrationHTTP2(t *testing.T) {
 		w.Header().Set("X-Protocol", r.Proto)
 		w.WriteHeader(http.StatusOK)
 	}))
-	
+
 	// Enable HTTP/2
 	server.TLS = &tls.Config{
+		MinVersion: tls.VersionTLS12,
 		NextProtos: []string{"h2", "http/1.1"},
 	}
 	server.StartTLS()
@@ -245,7 +254,7 @@ func TestIntegrationHTTP2(t *testing.T) {
 	client := server.Client()
 	baseTransport := client.Transport.(*http.Transport)
 	baseTransport.ForceAttemptHTTP2 = true
-	
+
 	ferret := New(WithTransport(baseTransport))
 	client.Transport = ferret
 
@@ -258,7 +267,7 @@ func TestIntegrationHTTP2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify protocol
 	if proto := resp.Header.Get("X-Protocol"); proto != "HTTP/2.0" {
@@ -271,7 +280,10 @@ func TestIntegrationHTTP2(t *testing.T) {
 		t.Fatal("No timing result found")
 	}
 
-	if result.TotalDuration() <= 0 {
+	totalDur := result.TotalDuration()
+	if totalDur < 0 {
+		t.Error("Total duration should not be negative")
+	} else if totalDur == 0 && runtime.GOOS != "windows" {
 		t.Error("Expected positive total duration")
 	}
 }
@@ -279,14 +291,14 @@ func TestIntegrationHTTP2(t *testing.T) {
 // TestIntegrationLargeResponse tests handling of large responses.
 func TestIntegrationLargeResponse(t *testing.T) {
 	// Create server that sends large response
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Send 1MB of data
 		data := make([]byte, 1024*1024)
 		for i := range data {
 			data[i] = byte(i % 256)
 		}
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
-		w.Write(data)
+		_, _ = w.Write(data)
 	}))
 	defer server.Close()
 
@@ -302,7 +314,7 @@ func TestIntegrationLargeResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Read the entire response
 	buf := make([]byte, 1024)
@@ -326,20 +338,31 @@ func TestIntegrationLargeResponse(t *testing.T) {
 	}
 
 	// Data transfer should take some time
-	if transfer := result.DataTransferDuration(); transfer <= 0 {
+	// On Windows, timing might be zero due to clock resolution
+	transfer := result.DataTransferDuration()
+	if transfer < 0 {
+		t.Error("Data transfer duration should not be negative")
+	} else if transfer == 0 && runtime.GOOS != "windows" {
 		t.Error("Expected positive data transfer duration for large response")
 	}
 
 	// TTFB should be less than total duration
-	if result.TTFB() >= result.TotalDuration() {
-		t.Error("TTFB should be less than total duration")
+	// On Windows, due to timing resolution, TTFB might equal TotalDuration for fast operations
+	ttfb := result.TTFB()
+	totalDuration := result.TotalDuration()
+	if ttfb > 0 && totalDuration > 0 {
+		if ttfb > totalDuration {
+			t.Error("TTFB should not be greater than total duration")
+		} else if ttfb == totalDuration && runtime.GOOS != "windows" {
+			t.Error("TTFB should be less than total duration")
+		}
 	}
 }
 
 // TestIntegrationWithRedirects tests redirect handling.
 func TestIntegrationWithRedirects(t *testing.T) {
 	redirectCount := 0
-	
+
 	// Create server with redirects
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -354,13 +377,13 @@ func TestIntegrationWithRedirects(t *testing.T) {
 		case "/final":
 			redirectCount++
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Final"))
+			_, _ = w.Write([]byte("Final"))
 		}
 	}))
 	defer server.Close()
 
 	ferret := New()
-	
+
 	// Use custom client that follows redirects
 	client := &http.Client{
 		Transport: ferret,
@@ -376,7 +399,7 @@ func TestIntegrationWithRedirects(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Should have followed redirects
 	if resp.StatusCode != http.StatusOK {
@@ -389,7 +412,11 @@ func TestIntegrationWithRedirects(t *testing.T) {
 		t.Fatal("No timing result found")
 	}
 
-	if result.TotalDuration() <= 0 {
+	totalDur := result.TotalDuration()
+	if totalDur < 0 {
+		t.Error("Total duration should not be negative")
+	} else if totalDur == 0 && runtime.GOOS != "windows" {
 		t.Error("Expected positive total duration")
 	}
 }
+

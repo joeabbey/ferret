@@ -1,10 +1,8 @@
 package ferret
 
 import (
-	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -15,10 +13,10 @@ import (
 type OpenTelemetryConfig struct {
 	// Tracer to use for creating spans
 	Tracer trace.Tracer
-	
+
 	// SpanNameFormatter allows customizing the span name
 	SpanNameFormatter func(*http.Request) string
-	
+
 	// Whether to record detailed timing events
 	DetailedEvents bool
 }
@@ -81,7 +79,7 @@ func (t *otelTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 			attribute.Int("http.status_code", resp.StatusCode),
 			attribute.String("http.status_text", http.StatusText(resp.StatusCode)),
 		)
-		
+
 		// Set span status based on HTTP status code
 		if resp.StatusCode >= 400 {
 			span.SetStatus(codes.Error, http.StatusText(resp.StatusCode))
@@ -142,10 +140,6 @@ func (t *otelTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
-// contextWithSpan is a helper to inject a span into a context for testing.
-func contextWithSpan(ctx context.Context, span trace.Span) context.Context {
-	return trace.ContextWithSpan(ctx, span)
-}
 
 // SimpleOpenTelemetryConfig creates a simple OpenTelemetry configuration.
 func SimpleOpenTelemetryConfig(tracer trace.Tracer) OpenTelemetryConfig {
@@ -171,7 +165,7 @@ func ExtractSpanContext(req *http.Request) trace.SpanContext {
 
 // InjectSpanContext injects a span context into an HTTP request.
 // This is useful for propagating trace context across service boundaries.
-func InjectSpanContext(req *http.Request, sc trace.SpanContext) {
+func InjectSpanContext(_ *http.Request, _ trace.SpanContext) {
 	// This would typically use the OpenTelemetry propagator API
 	// For now, we'll just document that users should use the propagator
 	// Example:
@@ -179,10 +173,3 @@ func InjectSpanContext(req *http.Request, sc trace.SpanContext) {
 	// propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 }
 
-// spanStatusFromHTTPStatus converts an HTTP status code to an OpenTelemetry status.
-func spanStatusFromHTTPStatus(statusCode int) (codes.Code, string) {
-	if statusCode < 400 {
-		return codes.Ok, ""
-	}
-	return codes.Error, strconv.Itoa(statusCode)
-}

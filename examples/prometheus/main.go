@@ -54,9 +54,19 @@ func main() {
 
 	// Start Prometheus metrics endpoint
 	go func() {
-		http.Handle("/metrics", promhttp.Handler())
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		
+		server := &http.Server{
+			Addr:         ":9090",
+			Handler:      mux,
+			ReadTimeout:  10 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  120 * time.Second,
+		}
+		
 		log.Println("Metrics available at http://localhost:9090/metrics")
-		log.Fatal(http.ListenAndServe(":9090", nil))
+		log.Fatal(server.ListenAndServe())
 	}()
 
 	// Make some example requests
@@ -78,7 +88,7 @@ func main() {
 			continue
 		}
 		
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		fmt.Printf("Status: %d\n", resp.StatusCode)
 		
 		// Small delay between requests

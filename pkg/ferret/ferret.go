@@ -22,8 +22,8 @@ type Ferret struct {
 	next http.RoundTripper
 
 	// Options
-	dialer        *net.Dialer
-	disableKeepAlives bool
+	dialer              *net.Dialer
+	disableKeepAlives   bool
 	tlsHandshakeTimeout time.Duration
 
 	// For testing
@@ -31,7 +31,7 @@ type Ferret struct {
 }
 
 // NewFerret creates a new Ferret transport with default settings.
-// DEPRECATED: Use New() with options instead.
+// Deprecated: Use New() with options instead.
 func NewFerret() *Ferret {
 	return New(
 		WithKeepAlives(false),
@@ -42,8 +42,8 @@ func NewFerret() *Ferret {
 // New creates a new Ferret transport with the given options.
 func New(opts ...Option) *Ferret {
 	f := &Ferret{
-		clock: time.Now,
-		disableKeepAlives: false, // Default to enabled for production use
+		clock:               time.Now,
+		disableKeepAlives:   false, // Default to enabled for production use
 		tlsHandshakeTimeout: 10 * time.Second,
 		dialer: &net.Dialer{
 			Timeout:   30 * time.Second,
@@ -67,7 +67,7 @@ func New(opts ...Option) *Ferret {
 	for _, opt := range opts {
 		opt(f)
 	}
-	
+
 	// Fix up any wrapped transports that need the base transport
 	if wrapper, ok := f.next.(*otelTransport); ok && wrapper.next == nil {
 		wrapper.next = baseTransport
@@ -89,39 +89,39 @@ func (f *Ferret) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	// Attach result to context
 	ctx := context.WithValue(req.Context(), resultKey, result)
-	
+
 	// Create httptrace client trace
 	trace := &httptrace.ClientTrace{
-		DNSStart: func(info httptrace.DNSStartInfo) {
+		DNSStart: func(_ httptrace.DNSStartInfo) {
 			result.DNSStart = f.clock()
 		},
-		DNSDone: func(info httptrace.DNSDoneInfo) {
+		DNSDone: func(_ httptrace.DNSDoneInfo) {
 			result.DNSDone = f.clock()
 		},
-		ConnectStart: func(network, addr string) {
+		ConnectStart: func(_, _ string) {
 			result.ConnectStart = f.clock()
 		},
-		ConnectDone: func(network, addr string, err error) {
+		ConnectDone: func(_, _ string, _ error) {
 			result.ConnectDone = f.clock()
 		},
 		TLSHandshakeStart: func() {
 			result.TLSHandshakeStart = f.clock()
 		},
-		TLSHandshakeDone: func(state tls.ConnectionState, err error) {
+		TLSHandshakeDone: func(_ tls.ConnectionState, _ error) {
 			result.TLSHandshakeDone = f.clock()
 		},
 		GotFirstResponseByte: func() {
 			result.FirstByte = f.clock()
 		},
 	}
-	
+
 	// Add trace to context
 	ctx = httptrace.WithClientTrace(ctx, trace)
 	req = req.WithContext(ctx)
 
 	// Execute the request
 	resp, err := f.next.RoundTrip(req)
-	
+
 	// Record completion time
 	result.End = f.clock()
 	result.Error = err
@@ -130,7 +130,7 @@ func (f *Ferret) RoundTrip(req *http.Request) (*http.Response, error) {
 	if resp != nil && result.FirstByte.IsZero() {
 		result.FirstByte = result.End
 	}
-	
+
 	// Store the result in the response request as well
 	if resp != nil && resp.Request != nil {
 		ctx := context.WithValue(resp.Request.Context(), resultKey, result)
@@ -168,7 +168,7 @@ func resultFromContext(ctx context.Context) *Result {
 // These methods are DEPRECATED and will be removed in a future version.
 
 // ReqDuration returns the request duration.
-// DEPRECATED: Use Result(req).RequestDuration() instead.
+// Deprecated: Use Result(req).RequestDuration() instead.
 func (f *Ferret) ReqDuration() time.Duration {
 	// This method cannot work correctly in concurrent scenarios
 	// Return 0 to indicate unavailable
@@ -176,7 +176,7 @@ func (f *Ferret) ReqDuration() time.Duration {
 }
 
 // ConnDuration returns the connection duration.
-// DEPRECATED: Use Result(req).ConnectionDuration() instead.
+// Deprecated: Use Result(req).ConnectionDuration() instead.
 func (f *Ferret) ConnDuration() time.Duration {
 	// This method cannot work correctly in concurrent scenarios
 	// Return 0 to indicate unavailable
@@ -184,7 +184,7 @@ func (f *Ferret) ConnDuration() time.Duration {
 }
 
 // Duration returns the total duration.
-// DEPRECATED: Use Result(req).TotalDuration() instead.
+// Deprecated: Use Result(req).TotalDuration() instead.
 func (f *Ferret) Duration() time.Duration {
 	// This method cannot work correctly in concurrent scenarios
 	// Return 0 to indicate unavailable

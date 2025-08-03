@@ -1,3 +1,4 @@
+// Package main provides the ferret CLI tool for HTTP request timing analysis.
 package main
 
 import (
@@ -18,15 +19,15 @@ import (
 
 // Output formats
 const (
-	FormatText = "text"
-	FormatJSON = "json"
+	FormatText  = "text"
+	FormatJSON  = "json"
 	FormatShort = "short"
 )
 
 // Command modes
 const (
 	ModeSimple = "simple"
-	ModeAWS = "aws"
+	ModeAWS    = "aws"
 )
 
 // Config holds the CLI configuration
@@ -56,17 +57,17 @@ type RequestResult struct {
 
 // Summary holds aggregate statistics
 type Summary struct {
-	URL         string          `json:"url"`
-	Iterations  int             `json:"iterations"`
-	Successful  int             `json:"successful"`
-	Failed      int             `json:"failed"`
-	Min         time.Duration   `json:"min_ms"`
-	Max         time.Duration   `json:"max_ms"`
-	Average     time.Duration   `json:"average_ms"`
-	Median      time.Duration   `json:"median_ms"`
-	P90         time.Duration   `json:"p90_ms"`
-	P99         time.Duration   `json:"p99_ms"`
-	Results     []RequestResult `json:"results,omitempty"`
+	URL        string          `json:"url"`
+	Iterations int             `json:"iterations"`
+	Successful int             `json:"successful"`
+	Failed     int             `json:"failed"`
+	Min        time.Duration   `json:"min_ms"`
+	Max        time.Duration   `json:"max_ms"`
+	Average    time.Duration   `json:"average_ms"`
+	Median     time.Duration   `json:"median_ms"`
+	P90        time.Duration   `json:"p90_ms"`
+	P99        time.Duration   `json:"p99_ms"`
+	Results    []RequestResult `json:"results,omitempty"`
 }
 
 // AWSResult holds results for AWS region testing
@@ -97,7 +98,7 @@ func parseFlags() Config {
 	flag.DurationVar(&config.Timeout, "timeout", 30*time.Second, "Request timeout")
 	flag.StringVar(&config.Method, "method", "GET", "HTTP method")
 	flag.BoolVar(&config.ShowDetails, "details", false, "Show detailed timing breakdown")
-	
+
 	flag.Parse()
 
 	// Validate
@@ -127,7 +128,7 @@ func runSimpleMode(config Config) {
 
 	results := make([]RequestResult, 0, config.Iterations)
 	resultsChan := make(chan RequestResult, config.Iterations)
-	
+
 	// Use semaphore for concurrency control
 	sem := make(chan struct{}, config.Concurrency)
 	var wg sync.WaitGroup
@@ -205,7 +206,7 @@ func runAWSMode(config Config) {
 			}
 
 			summary := generateSummary(r.Endpoint, results)
-			
+
 			mu.Lock()
 			awsResults = append(awsResults, AWSResult{
 				Region:  r,
@@ -254,7 +255,7 @@ func performRequest(client *http.Client, url, method string, iteration int) Requ
 			Error:     err.Error(),
 		}
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Consume body
 	_, _ = io.Copy(io.Discard, resp.Body)
@@ -345,7 +346,7 @@ func printProgress(result RequestResult) {
 func printText(summary Summary, showDetails bool) {
 	fmt.Printf("\n=== Summary for %s ===\n", summary.URL)
 	fmt.Printf("Iterations: %d (Success: %d, Failed: %d)\n", summary.Iterations, summary.Successful, summary.Failed)
-	
+
 	if summary.Successful > 0 {
 		fmt.Printf("\nLatency Statistics:\n")
 		fmt.Printf("  Min:     %v\n", summary.Min.Round(time.Millisecond))
@@ -436,3 +437,4 @@ func stringRepeat(s string, count int) string {
 	}
 	return result
 }
+

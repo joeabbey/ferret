@@ -67,7 +67,7 @@ func main() {
 	}
 
 	if !*follow {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}
@@ -108,7 +108,7 @@ func main() {
 	if *jsonOutput {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
-		encoder.Encode(results)
+		_ = encoder.Encode(results)
 	} else {
 		printSummary(results, *iterations)
 	}
@@ -138,7 +138,7 @@ func testURL(client *http.Client, method, url string, includeHeaders bool) Resul
 		result.Error = err.Error()
 		return result
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result.Status = resp.StatusCode
 
@@ -182,7 +182,7 @@ func printResult(r Result, iteration int) {
 	)
 }
 
-func printSummary(results []Result, iterations int) {
+func printSummary(results []Result, _ int) {
 	fmt.Println("\n=== Summary ===")
 
 	// Group by URL

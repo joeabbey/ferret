@@ -15,9 +15,9 @@ type Result struct {
 	End         time.Time
 
 	// Extended timings (will be populated in Phase 2)
-	DNSStart         time.Time
-	DNSDone          time.Time
-	ConnectStart     time.Time
+	DNSStart          time.Time
+	DNSDone           time.Time
+	ConnectStart      time.Time
 	TLSHandshakeStart time.Time
 	TLSHandshakeDone  time.Time
 
@@ -32,7 +32,7 @@ func (r *Result) ConnectionDuration() time.Duration {
 	if start.IsZero() {
 		start = r.Start
 	}
-	
+
 	if r.ConnectDone.IsZero() || start.IsZero() {
 		return 0
 	}
@@ -89,7 +89,7 @@ func (r *Result) ServerProcessingDuration() time.Duration {
 	if connEnd.IsZero() {
 		connEnd = r.ConnectDone
 	}
-	
+
 	if r.FirstByte.IsZero() || connEnd.IsZero() {
 		return 0
 	}
@@ -108,13 +108,13 @@ func (r *Result) DataTransferDuration() time.Duration {
 // MarshalJSON implements json.Marshaler for easy JSON output.
 func (r *Result) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		DNSMs      float64 `json:"dns_ms,omitempty"`
-		ConnectMs  float64 `json:"connect_ms"`
-		TLSMs      float64 `json:"tls_ms,omitempty"`
-		TTFBMs     float64 `json:"ttfb_ms"`
-		TotalMs    float64 `json:"total_ms"`
-		RequestMs  float64 `json:"request_ms"`
-		Error      string  `json:"error,omitempty"`
+		DNSMs     float64 `json:"dns_ms,omitempty"`
+		ConnectMs float64 `json:"connect_ms"`
+		TLSMs     float64 `json:"tls_ms,omitempty"`
+		TTFBMs    float64 `json:"ttfb_ms"`
+		TotalMs   float64 `json:"total_ms"`
+		RequestMs float64 `json:"request_ms"`
+		Error     string  `json:"error,omitempty"`
 	}{
 		DNSMs:     float64(r.DNSDuration()) / float64(time.Millisecond),
 		ConnectMs: float64(r.ConnectionDuration()) / float64(time.Millisecond),
@@ -131,29 +131,29 @@ func (r *Result) String() string {
 	if r.Error != nil {
 		return "Error: " + r.Error.Error()
 	}
-	
+
 	s := "total=" + r.TotalDuration().String()
-	
+
 	// Add DNS time if available
 	if dns := r.DNSDuration(); dns > 0 {
 		s += " dns=" + dns.String()
 	}
-	
+
 	// Add connection time
 	if conn := r.ConnectionDuration(); conn > 0 {
 		s += " connect=" + conn.String()
 	}
-	
+
 	// Add TLS time if available
 	if tls := r.TLSDuration(); tls > 0 {
 		s += " tls=" + tls.String()
 	}
-	
+
 	// Add TTFB
 	if ttfb := r.TTFB(); ttfb > 0 {
 		s += " ttfb=" + ttfb.String()
 	}
-	
+
 	return s
 }
 

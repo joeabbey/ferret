@@ -1,9 +1,9 @@
+// Package main provides a visual latency checker for AWS regions.
 package main
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"sort"
@@ -42,7 +42,6 @@ func main() {
 	}
 	ep := startUI(prefix, endpoints, suffix, iterations)
 	fmt.Printf("%s\n", ep)
-
 }
 
 func startUI(prefix string, endpoints []string, suffix string, iterations int) string {
@@ -73,7 +72,7 @@ func findNearestEndpoint(prefix string, endpoints []string, suffix string, itera
 	sem := make(chan bool, maxConcurrent)
 	var mtx sync.Mutex
 	var wg sync.WaitGroup
-	var results [][]time.Duration
+	results := make([][]time.Duration, 0, len(endpoints))
 
 	tableView := widgets.NewTable()
 	tableView.ColumnWidths = []int{15, 7}
@@ -101,8 +100,8 @@ func findNearestEndpoint(prefix string, endpoints []string, suffix string, itera
 	for e, endpoint := range endpoints {
 		for iter := 0; iter < iterations; iter++ {
 			sem <- true
+			wg.Add(1)
 			go func(iter int, e int, endpoint string) {
-				wg.Add(1)
 				defer wg.Done()
 				defer func() { <-sem }()
 
@@ -116,7 +115,6 @@ func findNearestEndpoint(prefix string, endpoints []string, suffix string, itera
 				}
 				ui.Render(tableView)
 				mtx.Unlock()
-
 			}(iter, e, endpoint)
 		}
 	}
@@ -149,10 +147,9 @@ func measureDuration(url string) (time.Duration, error) {
 	if err != nil {
 		return time.Duration(0), err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
-	output := ioutil.Discard
-	io.Copy(output, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	// Get the result from the response's request
 	result := ferret.GetResult(resp.Request)
@@ -168,11 +165,11 @@ func computeAverages(results [][]time.Duration, tableView *widgets.Table) {
 		var sum time.Duration
 		for _, result := range row {
 			if result != time.Duration(0) {
-				sum = sum + result
+				sum += result
 			}
 		}
 
-		//No this isn't a duration, but it makes the types match
+		// No this isn't a duration, but it makes the types match
 		iterations := time.Duration(len(row) - 1)
 		average := sum / iterations
 
@@ -197,7 +194,6 @@ func sortByAverage(tableView *widgets.Table) {
 }
 
 func colorizeRows(tableView *widgets.Table) {
-
 	d100ms, _ := time.ParseDuration("100ms")
 	d250ms, _ := time.ParseDuration("250ms")
 
@@ -206,11 +202,12 @@ func colorizeRows(tableView *widgets.Table) {
 		if err != nil {
 			continue
 		}
-		if avg < d100ms {
+		switch {
+		case avg < d100ms:
 			tableView.RowStyles[i] = ui.NewStyle(ui.ColorGreen)
-		} else if avg < d250ms {
+		case avg < d250ms:
 			tableView.RowStyles[i] = ui.NewStyle(ui.ColorYellow)
-		} else {
+		default:
 			tableView.RowStyles[i] = ui.NewStyle(ui.ColorRed)
 		}
 	}

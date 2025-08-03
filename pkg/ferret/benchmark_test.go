@@ -11,9 +11,9 @@ import (
 
 // BenchmarkFerretOverhead measures the overhead of Ferret vs standard transport.
 func BenchmarkFerretOverhead(b *testing.B) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -23,35 +23,35 @@ func BenchmarkFerretOverhead(b *testing.B) {
 				DisableKeepAlives: true,
 			},
 		}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			resp, err := client.Get(server.URL)
 			if err != nil {
 				b.Fatal(err)
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	})
 
 	b.Run("Ferret", func(b *testing.B) {
 		ferret := New(WithKeepAlives(false))
 		client := &http.Client{Transport: ferret}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			resp, err := client.Get(server.URL)
 			if err != nil {
 				b.Fatal(err)
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	})
 
 	b.Run("FerretWithResult", func(b *testing.B) {
 		ferret := New(WithKeepAlives(false))
 		client := &http.Client{Transport: ferret}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			req, _ := http.NewRequest("GET", server.URL, nil)
@@ -63,14 +63,14 @@ func BenchmarkFerretOverhead(b *testing.B) {
 			if result == nil {
 				b.Fatal("No result")
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	})
 }
 
 // BenchmarkConcurrentRequests measures performance under concurrent load.
 func BenchmarkConcurrentRequests(b *testing.B) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Simulate some processing
 		time.Sleep(1 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
@@ -87,14 +87,14 @@ func BenchmarkConcurrentRequests(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	})
 }
 
 // BenchmarkWithObservability measures overhead of observability features.
 func BenchmarkWithObservability(b *testing.B) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -102,11 +102,11 @@ func BenchmarkWithObservability(b *testing.B) {
 	b.Run("Plain", func(b *testing.B) {
 		ferret := New()
 		client := &http.Client{Transport: ferret}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			resp, _ := client.Get(server.URL)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	})
 
@@ -116,14 +116,14 @@ func BenchmarkWithObservability(b *testing.B) {
 			DurationHistogram: DefaultPrometheusHistogram(),
 			DetailedMetrics:   true,
 		}
-		
+
 		ferret := New(WithPrometheus(config))
 		client := &http.Client{Transport: ferret}
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			resp, _ := client.Get(server.URL)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 	})
 }
@@ -148,7 +148,7 @@ func BenchmarkResultOperations(b *testing.B) {
 		req, _ := http.NewRequest("GET", "http://example.com", nil)
 		ctx := context.WithValue(req.Context(), resultKey, result)
 		req = req.WithContext(ctx)
-		
+
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			r := GetResult(req)
@@ -174,7 +174,7 @@ func BenchmarkResultOperations(b *testing.B) {
 
 // BenchmarkMemoryAllocation measures memory allocations.
 func BenchmarkMemoryAllocation(b *testing.B) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -184,7 +184,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 
 	b.ReportAllocs()
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		req, _ := http.NewRequest("GET", server.URL, nil)
 		resp, err := client.Do(req)
@@ -195,7 +195,7 @@ func BenchmarkMemoryAllocation(b *testing.B) {
 		if result == nil {
 			b.Fatal("No result")
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 
@@ -207,9 +207,9 @@ func BenchmarkLargeResponse(b *testing.B) {
 		largeData[i] = byte(i % 256)
 	}
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Length", strconv.Itoa(len(largeData)))
-		w.Write(largeData)
+		_, _ = w.Write(largeData)
 	}))
 	defer server.Close()
 
@@ -224,7 +224,7 @@ func BenchmarkLargeResponse(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		// Read entire response
 		buf := make([]byte, 4096)
 		for {
@@ -233,6 +233,6 @@ func BenchmarkLargeResponse(b *testing.B) {
 				break
 			}
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
