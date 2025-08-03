@@ -147,11 +147,25 @@ The project uses GitHub Actions with the following jobs:
 
 1. **Windows Test Failures**: The CI uses conditional logic to handle Windows-specific test command formatting.
 
-2. **Linter Configuration**: The project uses golangci-lint v2 with a minimal configuration due to v2's strict schema requirements.
+2. **Windows Timing Resolution**: Windows has lower timer resolution than Unix systems (typically 15.6ms vs 1ms). This can cause very fast operations to report zero duration, leading to test failures. Tests should:
+   - Allow zero durations on Windows but not on other platforms
+   - Check for negative durations (which should never happen)
+   - Use `runtime.GOOS != "windows"` to apply platform-specific assertions
+   - Example pattern:
+   ```go
+   duration := result.TotalDuration()
+   if duration < 0 {
+       t.Error("Duration should not be negative")
+   } else if duration == 0 && runtime.GOOS != "windows" {
+       t.Error("Expected positive duration")
+   }
+   ```
 
-3. **Deprecated APIs**: The codebase has been updated to avoid deprecated Go standard library functions (e.g., io/ioutil).
+3. **Linter Configuration**: The project uses golangci-lint v2 with a minimal configuration due to v2's strict schema requirements.
 
-4. **Linter Failures in CI**: Always run `golangci-lint run` locally before pushing to avoid CI failures. The CI will reject PRs with linting issues.
+4. **Deprecated APIs**: The codebase has been updated to avoid deprecated Go standard library functions (e.g., io/ioutil).
+
+5. **Linter Failures in CI**: Always run `golangci-lint run` locally before pushing to avoid CI failures. The CI will reject PRs with linting issues.
 
 ## Code Style Guidelines
 
