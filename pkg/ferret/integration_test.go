@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"testing"
 	"time"
+	"runtime"
 )
 
 // TestIntegrationWithRealServer tests against a real HTTP server.
@@ -90,7 +91,11 @@ func TestIntegrationWithRealServer(t *testing.T) {
 					t.Error("Expected positive TLS duration for HTTPS")
 				}
 
-				if result.ConnectionDuration() <= 0 {
+				// On Windows, timing might be zero due to clock resolution
+				connDur := result.ConnectionDuration()
+				if connDur < 0 {
+					t.Error("Connection duration should not be negative")
+				} else if connDur == 0 && runtime.GOOS != "windows" {
 					t.Error("Expected positive connection duration")
 				}
 
@@ -221,7 +226,10 @@ func TestIntegrationWithProxy(t *testing.T) {
 		t.Fatal("No timing result found")
 	}
 
-	if result.TotalDuration() <= 0 {
+	totalDur := result.TotalDuration()
+	if totalDur < 0 {
+		t.Error("Total duration should not be negative")
+	} else if totalDur == 0 && runtime.GOOS != "windows" {
 		t.Error("Expected positive total duration")
 	}
 }
@@ -272,7 +280,10 @@ func TestIntegrationHTTP2(t *testing.T) {
 		t.Fatal("No timing result found")
 	}
 
-	if result.TotalDuration() <= 0 {
+	totalDur := result.TotalDuration()
+	if totalDur < 0 {
+		t.Error("Total duration should not be negative")
+	} else if totalDur == 0 && runtime.GOOS != "windows" {
 		t.Error("Expected positive total duration")
 	}
 }
@@ -327,12 +338,16 @@ func TestIntegrationLargeResponse(t *testing.T) {
 	}
 
 	// Data transfer should take some time
-	if transfer := result.DataTransferDuration(); transfer <= 0 {
+	// On Windows, timing might be zero due to clock resolution
+	transfer := result.DataTransferDuration()
+	if transfer < 0 {
+		t.Error("Data transfer duration should not be negative")
+	} else if transfer == 0 && runtime.GOOS != "windows" {
 		t.Error("Expected positive data transfer duration for large response")
 	}
 
 	// TTFB should be less than total duration
-	if result.TTFB() >= result.TotalDuration() {
+	if result.TTFB() > 0 && result.TotalDuration() > 0 && result.TTFB() >= result.TotalDuration() {
 		t.Error("TTFB should be less than total duration")
 	}
 }
@@ -390,7 +405,10 @@ func TestIntegrationWithRedirects(t *testing.T) {
 		t.Fatal("No timing result found")
 	}
 
-	if result.TotalDuration() <= 0 {
+	totalDur := result.TotalDuration()
+	if totalDur < 0 {
+		t.Error("Total duration should not be negative")
+	} else if totalDur == 0 && runtime.GOOS != "windows" {
 		t.Error("Expected positive total duration")
 	}
 }

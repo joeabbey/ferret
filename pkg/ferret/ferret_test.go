@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -279,10 +280,18 @@ func TestHTTPTraceIntegration(t *testing.T) {
 	// or in slightly different order depending on the implementation
 
 	// Verify durations
-	if result.ConnectionDuration() <= 0 {
+	// On Windows, timing might be zero due to clock resolution
+	connDuration := result.ConnectionDuration()
+	if connDuration < 0 {
+		t.Error("ConnectionDuration should not be negative")
+	} else if connDuration == 0 && runtime.GOOS != "windows" {
 		t.Error("ConnectionDuration should be positive")
 	}
-	if result.TLSDuration() <= 0 {
+	
+	tlsDuration := result.TLSDuration()
+	if tlsDuration < 0 {
+		t.Error("TLSDuration should not be negative")
+	} else if tlsDuration == 0 && runtime.GOOS != "windows" {
 		t.Error("TLSDuration should be positive")
 	}
 	if result.ServerProcessingDuration() <= 0 {

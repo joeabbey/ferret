@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -261,8 +262,16 @@ func TestConcurrentMetricsCollection(t *testing.T) {
 		}
 
 		duration := result.TotalDuration()
-		if duration <= 0 {
-			t.Errorf("Result %d has invalid duration", i)
+		if duration < 0 {
+			t.Errorf("Result %d has negative duration", i)
+			continue
+		}
+		// On Windows, very fast operations might report 0 duration due to clock resolution
+		if duration == 0 && runtime.GOOS == "windows" {
+			t.Logf("Result %d has zero duration on Windows (clock resolution issue)", i)
+			continue
+		} else if duration == 0 {
+			t.Errorf("Result %d has zero duration", i)
 			continue
 		}
 
