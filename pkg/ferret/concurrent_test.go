@@ -157,7 +157,11 @@ func TestConcurrentWithMultipleTransports(t *testing.T) {
 					return
 				}
 
-				if result.TotalDuration() <= 0 {
+				// On Windows, timing might be zero due to clock resolution
+				totalDur := result.TotalDuration()
+				if totalDur < 0 {
+					t.Error("Duration should not be negative")
+				} else if totalDur == 0 && runtime.GOOS != "windows" {
 					t.Error("Invalid duration")
 				}
 			}(i, j)
