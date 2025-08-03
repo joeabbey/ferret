@@ -30,44 +30,6 @@ linters:
     - revive
     - whitespace
 
-linters-settings:
-  govet:
-    check-shadowing: true
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-  lll:
-    line-length: 120
-  nakedret:
-    max-func-lines: 30
-  dupl:
-    threshold: 100
-  revive:
-    rules:
-      - name: gofmt
-        disabled: false
-
 issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - gosec
-        - dupl
-    
-    # Exclude example files
-    - path: example_test\.go
-      linters:
-        - lll
-    
-    # Allow fmt.Printf in main packages
-    - path: cmd/
-      linters:
-        - forbidigo
-
   max-issues-per-linter: 0
   max-same-issues: 0
