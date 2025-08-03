@@ -88,7 +88,7 @@ func main() {
 			continue
 		}
 		
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		fmt.Printf("Status: %d\n", resp.StatusCode)
 		
 		// Small delay between requests

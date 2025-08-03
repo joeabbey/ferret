@@ -148,7 +148,7 @@ func measureDuration(url string) (time.Duration, error) {
 	}
 	defer resp.Body.Close()
 
-	io.Copy(io.Discard, resp.Body)
+	_, _ = io.Copy(io.Discard, resp.Body)
 
 	// Get the result from the response's request
 	result := ferret.GetResult(resp.Request)

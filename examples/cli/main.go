@@ -108,7 +108,7 @@ func main() {
 	if *jsonOutput {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
-		encoder.Encode(results)
+		_ = encoder.Encode(results)
 	} else {
 		printSummary(results, *iterations)
 	}
